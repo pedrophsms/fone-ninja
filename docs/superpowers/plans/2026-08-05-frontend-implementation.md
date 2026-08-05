@@ -1242,8 +1242,8 @@ export function usePurchaseForm() {
     form.produtos.forEach((item, index) => {
       if (!item.id) errors[`produtos.${index}.id`] = ['Selecione um produto']
       if (item.quantidade < 1) errors[`produtos.${index}.quantidade`] = ['Quantidade mínima é 1']
-      if (item.preco_unitario <= 0) {
-        errors[`produtos.${index}.preco_unitario`] = ['Preço unitário deve ser positivo']
+      if (item.preco_unitario < 0.01) {
+        errors[`produtos.${index}.preco_unitario`] = ['Preço unitário deve ser no mínimo 0.01']
       }
     })
     return Object.keys(errors).length === 0
@@ -1324,7 +1324,11 @@ Expected: PASS (3 tests)
       </v-card-text>
     </v-card>
 
-    <v-data-table :items="purchaseStore.items" :loading="purchaseStore.loading" :headers="headers" />
+    <v-data-table :items="purchaseStore.items" :loading="purchaseStore.loading" :headers="headers">
+      <template #item.produtos="{ item }">
+        {{ item.produtos.map((p) => `${p.produto_nome} x${p.quantidade}`).join(', ') }}
+      </template>
+    </v-data-table>
   </div>
 </template>
 
@@ -1341,6 +1345,7 @@ const productStore = useProductStore()
 const headers = [
   { title: 'Fornecedor', key: 'fornecedor' },
   { title: 'Total', key: 'total' },
+  { title: 'Itens', key: 'produtos', sortable: false },
   { title: 'Data', key: 'created_at' },
 ]
 
@@ -1564,8 +1569,8 @@ export function useSaleForm() {
     form.produtos.forEach((item, index) => {
       if (!item.id) errors[`produtos.${index}.id`] = ['Selecione um produto']
       if (item.quantidade < 1) errors[`produtos.${index}.quantidade`] = ['Quantidade mínima é 1']
-      if (item.preco_unitario <= 0) {
-        errors[`produtos.${index}.preco_unitario`] = ['Preço unitário deve ser positivo']
+      if (item.preco_unitario < 0.01) {
+        errors[`produtos.${index}.preco_unitario`] = ['Preço unitário deve ser no mínimo 0.01']
       }
     })
     return Object.keys(errors).length === 0
@@ -1980,3 +1985,4 @@ git commit -m "docs: add setup instructions and seeded login credentials"
 - **Spec coverage**: every spec section (§2 layered architecture, §3.1 HTTP client, §3.2 error handling, §3.3 routing, §4 all four screens, §5 testing, §6 folder structure) maps to at least one task above. The seeded-credentials and product-refetch-after-purchase/sale fixes from the design review are implemented in Tasks 7, 8, and 10.
 - **Idempotency key correctness**: Task 7/8 generate the key inside the composable's `submit()`, once per call, and pass it explicitly to the store/service — matching the corrected design. Task 9 adds the re-entry guard (`if (loading.value) return`) that the design's "first line of defense" language implied but earlier tasks hadn't yet coded explicitly; this task closes that gap with a real regression test rather than leaving it as an assumption.
 - **Type consistency**: `Purchase`/`Sale`/`PurchaseItem`/`SaleItem` (Task 2) are used identically in every later service, store, composable, and test — no renamed fields.
+- **Post-review fixes**: an independent review against this plan flagged two real gaps, both fixed inline above: (1) `PurchasesView`'s history table was missing the `produtos` (items) column the spec's §4 explicitly requires — added as a slot rendering `nome xquantidade` per item; (2) `usePurchaseForm`/`useSaleForm` validated `preco_unitario` as merely positive (`< 0.01` was allowed), looser than the backend's `min:0.01` rule — tightened to `< 0.01` in both composables so the client rejects what the backend would reject, instead of round-tripping a 422.
