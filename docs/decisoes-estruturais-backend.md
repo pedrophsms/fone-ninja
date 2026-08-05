@@ -6,45 +6,25 @@ Registro das decisões arquiteturais do backend, contexto em que foram tomadas e
 
 ## Índice
 
-1. [Laravel 13 como framework](#1-laravel-13-como-framework)
-2. [PHP 8.4 como versão mínima](#2-php-84-como-versão-mínima)
-3. [Sanctum token-based auth (sem OAuth/JWT)](#3-sanctum-token-based-auth-sem-oauthjwt)
-4. [Money como Value Object (centavos inteiros)](#4-money-como-value-object-centavos-inteiros)
-5. [Padrão Action (casos de uso)](#5-padrão-action-casos-de-uso)
-6. [Repository Pattern com interfaces](#6-repository-pattern-com-interfaces)
-7. [DTOs imutáveis com fromValidated](#7-dtos-imutáveis-com-fromvalidated)
-8. [Idempotência via middleware + tabela](#8-idempotência-via-middleware--tabela)
-9. [Event-driven StockMovement (auditoria append-only)](#9-event-driven-stockmovement-auditoria-append-only)
-10. [Lock pessimista (lockForUpdate)](#10-lock-pessimista-lockforupdate)
-11. [DB::transaction com 3 retries](#11-dbtransaction-com-3-retries)
-12. [FormRequests (não validação inline nos controllers)](#12-formrequests-não-validação-inline-nos-controllers)
-13. [Services pequenos e focados (não Services monolíticos)](#13-services-pequenos-e-focados-não-services-monolíticos)
-14. [Pest (não PHPUnit puro) para testes](#14-pest-não-phpunit-puro-para-testes)
-15. [Português na fronteira HTTP, inglês internamente](#15-português-na-fronteira-http-inglês-internamente)
-16. [Docs unificada na raiz (não por módulo)](#16-docs-unificada-na-raiz-não-por-módulo)
+1. [PHP 8.4 como versão mínima](#1-php-84-como-versão-mínima)
+2. [Sanctum token-based auth (sem OAuth/JWT)](#2-sanctum-token-based-auth-sem-oauthjwt)
+3. [Money como Value Object (centavos inteiros)](#3-money-como-value-object-centavos-inteiros)
+4. [Padrão Action (casos de uso)](#4-padrão-action-casos-de-uso)
+5. [Repository Pattern com interfaces](#5-repository-pattern-com-interfaces)
+6. [DTOs imutáveis com fromValidated](#6-dtos-imutáveis-com-fromvalidated)
+7. [Idempotência via middleware + tabela](#7-idempotência-via-middleware--tabela)
+8. [Event-driven StockMovement (auditoria append-only)](#8-event-driven-stockmovement-auditoria-append-only)
+9. [Lock pessimista (lockForUpdate)](#9-lock-pessimista-lockforupdate)
+10. [DB::transaction com 3 retries](#10-dbtransaction-com-3-retries)
+11. [FormRequests (não validação inline nos controllers)](#11-formrequests-não-validação-inline-nos-controllers)
+12. [Services pequenos e focados (não Services monolíticos)](#12-services-pequenos-e-focados-não-services-monolíticos)
+13. [Pest (não PHPUnit puro) para testes](#13-pest-não-phpunit-puro-para-testes)
+14. [Português na fronteira HTTP, inglês internamente](#14-português-na-fronteira-http-inglês-internamente)
+15. [Docs unificada na raiz (não por módulo)](#15-docs-unificada-na-raiz-não-por-módulo)
 
 ---
 
-## 1. Laravel 13 como framework
-
-**Decisão**: Usar Laravel 13 como framework da API.
-
-**Alternativas consideradas**: Symfony, Slim, AdonisJS, FastAPI.
-
-**Contexto**: ERP de estoque single-context — CRUD com regras de negócio de média complexidade (cálculo de custo médio, controle de estoque, idempotência). Time pequeno, necessidade de entregar rápido.
-
-**Por que Laravel**:
-- Ecossistema completo built-in: migrations, queues, events, validation, middleware pipeline, logging
-- Sanctum para autenticação token-based sem complexidade de OAuth
-- FormRequests nativos com mensagens de erro estruturadas (usados pelo frontend para fieldErrors)
-- PHP é a linguagem com maior familiaridade do time
-- Laravel 13 é a versão estável mais recente com suporte de longo prazo
-
-**Trade-offs aceitos**: Overhead de framework para um domínio relativamente simples. Compensado pela velocidade de desenvolvimento.
-
----
-
-## 2. PHP 8.4 como versão mínima
+## 1. PHP 8.4 como versão mínima
 
 **Decisão**: Exigir PHP 8.4 no `composer.json`.
 
@@ -62,7 +42,7 @@ Registro das decisões arquiteturais do backend, contexto em que foram tomadas e
 
 ---
 
-## 3. Sanctum token-based auth (sem OAuth/JWT)
+## 2. Sanctum token-based auth (sem OAuth/JWT)
 
 **Decisão**: Laravel Sanctum para autenticação por token simples.
 
@@ -85,7 +65,7 @@ Registro das decisões arquiteturais do backend, contexto em que foram tomadas e
 
 ---
 
-## 4. Money como Value Object (centavos inteiros)
+## 3. Money como Value Object (centavos inteiros)
 
 **Decisão**: Representar todos os valores monetários como centavos inteiros (`int`) encapsulados em um Value Object `Money` imutável, com `MoneyCast` para tradução Eloquent ↔ VO.
 
@@ -108,7 +88,7 @@ Registro das decisões arquiteturais do backend, contexto em que foram tomadas e
 
 ---
 
-## 5. Padrão Action (casos de uso)
+## 4. Padrão Action (casos de uso)
 
 **Decisão**: Cada operação de negócio é uma classe Action dedicada (ex: `RegisterPurchaseAction`), isolada de controllers.
 
@@ -131,7 +111,7 @@ Registro das decisões arquiteturais do backend, contexto em que foram tomadas e
 
 ---
 
-## 6. Repository Pattern com interfaces
+## 5. Repository Pattern com interfaces
 
 **Decisão**: Interfaces de repositório (`ProductRepositoryInterface`) com implementações Eloquent, bindings no `RepositoryServiceProvider`.
 
@@ -151,7 +131,7 @@ Registro das decisões arquiteturais do backend, contexto em que foram tomadas e
 
 ---
 
-## 7. DTOs imutáveis com fromValidated
+## 6. DTOs imutáveis com fromValidated
 
 **Decisão**: Data Transfer Objects como `final class` com propriedades tipadas e factory method `fromValidated(array)`.
 
@@ -173,7 +153,7 @@ Registro das decisões arquiteturais do backend, contexto em que foram tomadas e
 
 ---
 
-## 8. Idempotência via middleware + tabela
+## 7. Idempotência via middleware + tabela
 
 **Decisão**: Middleware `EnsureIdempotencyKey` que persiste estado em tabela `idempotency_keys` com `UNIQUE(user_id, key)`.
 
@@ -196,7 +176,7 @@ Registro das decisões arquiteturais do backend, contexto em que foram tomadas e
 
 ---
 
-## 9. Event-driven StockMovement (auditoria append-only)
+## 8. Event-driven StockMovement (auditoria append-only)
 
 **Decisão**: `stock_movements` como tabela append-only, populada por listener `RecordStockMovement` que reage a 3 eventos (`PurchaseRegistered`, `SaleRegistered`, `SaleCancelled`).
 
@@ -218,7 +198,7 @@ Registro das decisões arquiteturais do backend, contexto em que foram tomadas e
 
 ---
 
-## 10. Lock pessimista (lockForUpdate)
+## 9. Lock pessimista (lockForUpdate)
 
 **Decisão**: Usar `SELECT ... FOR UPDATE` em todas as operações que alteram produto (compra, venda, cancelamento).
 
@@ -240,7 +220,7 @@ Registro das decisões arquiteturais do backend, contexto em que foram tomadas e
 
 ---
 
-## 11. DB::transaction com 3 retries
+## 10. DB::transaction com 3 retries
 
 **Decisão**: Todas as ações financeiras usam `DB::transaction(fn, 3)` — 3 tentativas em caso de deadlock.
 
@@ -262,7 +242,7 @@ Registro das decisões arquiteturais do backend, contexto em que foram tomadas e
 
 ---
 
-## 12. FormRequests (não validação inline nos controllers)
+## 11. FormRequests (não validação inline nos controllers)
 
 **Decisão**: Validação de entrada via classes `FormRequest` dedicadas (ex: `StorePurchaseRequest`).
 
@@ -285,7 +265,7 @@ Registro das decisões arquiteturais do backend, contexto em que foram tomadas e
 
 ---
 
-## 13. Services pequenos e focados (não Services monolíticos)
+## 12. Services pequenos e focados (não Services monolíticos)
 
 **Decisão**: Separar lógica de cálculo em serviços especializados — `AverageCostService` (média ponderada) e `ProfitCalculatorService` (lucro por item).
 
@@ -307,7 +287,7 @@ Registro das decisões arquiteturais do backend, contexto em que foram tomadas e
 
 ---
 
-## 14. Pest (não PHPUnit puro) para testes
+## 13. Pest (não PHPUnit puro) para testes
 
 **Decisão**: Pest 4 como test runner, sobre PHPUnit 12.
 
@@ -327,7 +307,7 @@ Registro das decisões arquiteturais do backend, contexto em que foram tomadas e
 
 ---
 
-## 15. Português na fronteira HTTP, inglês internamente
+## 14. Português na fronteira HTTP, inglês internamente
 
 **Decisão**: Campos da API e mensagens de erro em português (`fornecedor`, `cliente`, `preco_unitario`, "Estoque insuficiente"). Código, classes, métodos e comentários em inglês.
 
@@ -349,7 +329,7 @@ Registro das decisões arquiteturais do backend, contexto em que foram tomadas e
 
 ---
 
-## 16. Docs unificada na raiz (não por módulo)
+## 15. Docs unificada na raiz (não por módulo)
 
 **Decisão**: Pasta única `docs/` na raiz do projeto com documentação de negócio, backend e frontend.
 

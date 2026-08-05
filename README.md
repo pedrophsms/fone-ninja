@@ -88,5 +88,5 @@ Documentação unificada em `docs/`:
 | [`regras-de-negocio.md`](docs/regras-de-negocio.md) | Glossário, fluxos de compra/venda/cancelamento, cálculos de custo médio e lucro, KPIs, integridade |
 | [`arquitetura-backend.md`](docs/arquitetura-backend.md) | Modelo ER, middleware pipeline, Actions, eventos, Money VO, Repository pattern |
 | [`arquitetura-frontend.md`](docs/arquitetura-frontend.md) | Camadas View→Composable→Store→Service→HTTP, rotas, stores, pipeline de erro, formulários, tema |
-| [`decisoes-estruturais-backend.md`](docs/decisoes-estruturais-backend.md) | 14 ADRs: Laravel, PHP 8.4, Sanctum, Money VO, Action, Repository, DTO, idempotência, eventos, locks, retries, FormRequests, services, Pest |
-| [`decisoes-estruturais-frontend.md`](docs/decisoes-estruturais-frontend.md) | 11 ADRs: Vue 3 SPA, TS strict, Pinia, shadcn-vue, TanStack Table, composables, Tailwind v4, Axios interceptor, Vitest |
+| [`decisoes-estruturais-backend.md`](docs/decisoes-estruturais-backend.md) | 15 ADRs: PHP 8.4, Sanctum, Money VO, Action, Repository, DTO, idempotência, eventos, locks, retries, FormRequests, services, Pest, idioma, docs |
+| [`decisoes-estruturais-frontend.md`](docs/decisoes-estruturais-frontend.md) | 10 ADRs: TS strict, Pinia, shadcn-vue, TanStack Table, composables, Tailwind v4, Axios interceptor, Vitest, idioma, docs |

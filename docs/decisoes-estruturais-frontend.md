@@ -6,44 +6,20 @@ Registro das decisões arquiteturais do frontend, contexto em que foram tomadas 
 
 ## Índice
 
-1. [Vue 3 SPA (sem SSR/Nuxt)](#1-vue-3-spa-sem-ssrnuxt)
-2. [TypeScript strict mode](#2-typescript-strict-mode)
-3. [Pinia (não Vuex) para estado global](#3-pinia-não-vuex-para-estado-global)
-4. [shadcn-vue / reka-ui (não Vuetify/PrimeVue)](#4-shadcn-vue--reka-ui-não-vuetifyprimevue)
-5. [TanStack Table (não tabela customizada)](#5-tanstack-table-não-tabela-customizada)
-6. [Composables como camada intermediária](#6-composables-como-camada-intermediária)
-7. [Tailwind CSS v4 (não CSS Modules/SCSS)](#7-tailwind-css-v4-não-css-modulesscss)
-8. [Axios com interceptor único de erro (não try/catch por chamada)](#8-axios-com-interceptor-único-de-erro-não-trycatch-por-chamada)
-9. [Vitest (não Jest) para testes](#9-vitest-não-jest-para-testes)
-10. [Português na fronteira HTTP, inglês internamente](#10-português-na-fronteira-http-inglês-internamente)
-11. [Docs unificada na raiz (não por módulo)](#11-docs-unificada-na-raiz-não-por-módulo)
+1. [TypeScript strict mode](#1-typescript-strict-mode)
+2. [Pinia (não Vuex) para estado global](#2-pinia-não-vuex-para-estado-global)
+3. [shadcn-vue / reka-ui (não Vuetify/PrimeVue)](#3-shadcn-vue--reka-ui-não-vuetifyprimevue)
+4. [TanStack Table (não tabela customizada)](#4-tanstack-table-não-tabela-customizada)
+5. [Composables como camada intermediária](#5-composables-como-camada-intermediária)
+6. [Tailwind CSS v4 (não CSS Modules/SCSS)](#6-tailwind-css-v4-não-css-modulesscss)
+7. [Axios com interceptor único de erro (não try/catch por chamada)](#7-axios-com-interceptor-único-de-erro-não-trycatch-por-chamada)
+8. [Vitest (não Jest) para testes](#8-vitest-não-jest-para-testes)
+9. [Português na fronteira HTTP, inglês internamente](#9-português-na-fronteira-http-inglês-internamente)
+10. [Docs unificada na raiz (não por módulo)](#10-docs-unificada-na-raiz-não-por-módulo)
 
 ---
 
-## 1. Vue 3 SPA (sem SSR/Nuxt)
-
-**Decisão**: SPA pura em Vue 3, sem Nuxt ou SSR.
-
-**Alternativas consideradas**: Nuxt 3, React + Next.js, HTMX + templates Blade, Inertia.js.
-
-**Contexto**: Aplicação interna de ERP — SEO irrelevante, usuários autenticados, carregamento inicial aceitável. Sem necessidade de server-side rendering.
-
-**Por que Vue 3 SPA**:
-- Separação clara front/back — API REST pura no Laravel
-- Deploy simples: build estático servido por nginx
-- Composition API + `<script setup>` reduzem boilerplate
-- SPA permite transições de UI mais fluidas entre telas (já carregadas)
-- Sem complexidade de hidratação SSR
-
-**Por que não Nuxt**: Adicionaria camada extra de servidor Node sem benefício real (sem SEO, sem SSG). Convenções de file-based routing não justificam o overhead para 6 rotas.
-
-**Por que não Inertia.js**: Acopla front e back no mesmo deploy. Prefere-se API REST pura para separação de responsabilidades e testabilidade independente.
-
-**Trade-offs aceitos**: Bundle inicial maior (~200KB gzip). Irrelevante para aplicação interna em rede local/estável.
-
----
-
-## 2. TypeScript strict mode
+## 1. TypeScript strict mode
 
 **Decisão**: `tsconfig.json` com `"strict": true`.
 
@@ -61,7 +37,7 @@ Registro das decisões arquiteturais do frontend, contexto em que foram tomadas 
 
 ---
 
-## 3. Pinia (não Vuex) para estado global
+## 2. Pinia (não Vuex) para estado global
 
 **Decisão**: Pinia 2.3 como biblioteca de estado.
 
@@ -84,7 +60,7 @@ Registro das decisões arquiteturais do frontend, contexto em que foram tomadas 
 
 ---
 
-## 4. shadcn-vue / reka-ui (não Vuetify/PrimeVue)
+## 3. shadcn-vue / reka-ui (não Vuetify/PrimeVue)
 
 **Decisão**: Componentes UI baseados em shadcn-vue (style system) + reka-ui (primitivos headless).
 
@@ -107,7 +83,7 @@ Registro das decisões arquiteturais do frontend, contexto em que foram tomadas 
 
 ---
 
-## 5. TanStack Table (não tabela customizada)
+## 4. TanStack Table (não tabela customizada)
 
 **Decisão**: @tanstack/vue-table 8 para tabelas de dados.
 
@@ -130,7 +106,7 @@ Registro das decisões arquiteturais do frontend, contexto em que foram tomadas 
 
 ---
 
-## 6. Composables como camada intermediária
+## 5. Composables como camada intermediária
 
 **Decisão**: Lógica de formulário e tratamento de erro em composables (`useProductForm`, `usePurchaseForm`, `useSaleForm`, `useApiError`), entre View e Store.
 
@@ -153,7 +129,7 @@ Registro das decisões arquiteturais do frontend, contexto em que foram tomadas 
 
 ---
 
-## 7. Tailwind CSS v4 (não CSS Modules/SCSS)
+## 6. Tailwind CSS v4 (não CSS Modules/SCSS)
 
 **Decisão**: Tailwind CSS v4 com `@tailwindcss/vite` para estilização.
 
@@ -177,7 +153,7 @@ Registro das decisões arquiteturais do frontend, contexto em que foram tomadas 
 
 ---
 
-## 8. Axios com interceptor único de erro (não try/catch por chamada)
+## 7. Axios com interceptor único de erro (não try/catch por chamada)
 
 **Decisão**: Interceptor de resposta no Axios que normaliza TODOS os erros em `ApiError { message, fieldErrors? }`. Serviços e composables nunca usam `try/catch`.
 
@@ -200,7 +176,7 @@ Registro das decisões arquiteturais do frontend, contexto em que foram tomadas 
 
 ---
 
-## 9. Vitest (não Jest) para testes
+## 8. Vitest (não Jest) para testes
 
 **Decisão**: Vitest 4 como test runner.
 
@@ -224,7 +200,7 @@ Registro das decisões arquiteturais do frontend, contexto em que foram tomadas 
 
 ---
 
-## 10. Português na fronteira HTTP, inglês internamente
+## 9. Português na fronteira HTTP, inglês internamente
 
 **Decisão**: Campos da API e mensagens de erro em português (`fornecedor`, `cliente`, `preco_unitario`, "Estoque insuficiente"). Código, classes, métodos e comentários em inglês.
 
@@ -246,7 +222,7 @@ Registro das decisões arquiteturais do frontend, contexto em que foram tomadas 
 
 ---
 
-## 11. Docs unificada na raiz (não por módulo)
+## 10. Docs unificada na raiz (não por módulo)
 
 **Decisão**: Pasta única `docs/` na raiz do projeto com documentação de negócio, backend e frontend.
 
