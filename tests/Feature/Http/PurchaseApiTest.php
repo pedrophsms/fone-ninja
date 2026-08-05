@@ -20,8 +20,8 @@ test('registering a purchase increases stock and updates the average cost', func
     ], ['Idempotency-Key' => 'purchase-1']);
 
     $response->assertCreated();
-    $response->assertJsonPath('fornecedor', 'Fornecedor X');
-    $response->assertJsonPath('total', '1300.00');
+    $response->assertJsonPath('data.fornecedor', 'Fornecedor X');
+    $response->assertJsonPath('data.total', '1300.00');
 
     $productA->refresh();
     expect($productA->current_stock)->toBe(50);
@@ -53,6 +53,18 @@ test('duplicate product ids in the same purchase payload are rejected', function
     ], ['Idempotency-Key' => 'purchase-3']);
 
     $response->assertStatus(422);
+});
+
+test('preco_unitario with more than 2 decimal places is rejected with 422, not 500', function () {
+    $product = Product::factory()->create();
+
+    $response = $this->postJson('/api/compras', [
+        'fornecedor' => 'Fornecedor Decimal',
+        'produtos' => [['id' => $product->id, 'quantidade' => 1, 'preco_unitario' => '10.999']],
+    ], ['Idempotency-Key' => 'purchase-decimal']);
+
+    $response->assertStatus(422);
+    $response->assertJsonValidationErrors('produtos.0.preco_unitario');
 });
 
 test('purchases can be listed with items', function () {

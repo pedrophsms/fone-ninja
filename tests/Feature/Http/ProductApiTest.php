@@ -11,10 +11,12 @@ test('a product can be created with the README fields', function () {
 
     $response->assertCreated();
     $response->assertJson([
-        'nome' => 'Fone Bluetooth',
-        'preco_venda' => '99.90',
-        'custo_medio' => '0.00',
-        'estoque' => 0,
+        'data' => [
+            'nome' => 'Fone Bluetooth',
+            'preco_venda' => '99.90',
+            'custo_medio' => '0.00',
+            'estoque' => 0,
+        ],
     ]);
 });
 
@@ -27,6 +29,13 @@ test('nome must be at least 3 characters', function () {
 
 test('preco_venda must be positive', function () {
     $response = $this->postJson('/api/produtos', ['nome' => 'Produto Teste', 'preco_venda' => '0']);
+
+    $response->assertStatus(422);
+    $response->assertJsonValidationErrors('preco_venda');
+});
+
+test('preco_venda with more than 2 decimal places is rejected with 422, not 500', function () {
+    $response = $this->postJson('/api/produtos', ['nome' => 'Produto Teste', 'preco_venda' => '10.999']);
 
     $response->assertStatus(422);
     $response->assertJsonValidationErrors('preco_venda');

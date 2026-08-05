@@ -51,6 +51,6 @@ class ProductsController extends Controller
             salePrice: Money::fromDecimalString((string) $request->validated('preco_venda')),
         );
 
-        return response()->json(new ProductResource($product), 201);
+        return (new ProductResource($product))->response()->setStatusCode(201);
     }
 }

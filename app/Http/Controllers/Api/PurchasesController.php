@@ -25,6 +25,6 @@ class PurchasesController extends Controller
             $request->user()->id,
         );
 
-        return response()->json(new PurchaseResource($purchase), 201);
+        return (new PurchaseResource($purchase))->response()->setStatusCode(201);
     }
 }

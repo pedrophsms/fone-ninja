@@ -27,7 +27,7 @@ class SalesController extends Controller
             $request->user()->id,
         );
 
-        return response()->json(new SaleResource($sale), 201);
+        return (new SaleResource($sale))->response()->setStatusCode(201);
     }
 
     public function cancel(int $id, Request $request, CancelSaleAction $action): SaleResource

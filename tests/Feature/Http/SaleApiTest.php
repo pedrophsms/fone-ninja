@@ -20,8 +20,8 @@ test('registering a sale decreases stock and returns total and profit', function
     ], ['Idempotency-Key' => 'sale-1']);
 
     $response->assertCreated();
-    $response->assertJsonPath('total', '100.00');
-    $response->assertJsonPath('lucro', '40.00');
+    $response->assertJsonPath('data.total', '100.00');
+    $response->assertJsonPath('data.lucro', '40.00');
 
     $product->refresh();
     expect($product->current_stock)->toBe(8);
@@ -53,7 +53,7 @@ test('cancelling a sale reverses stock without touching average cost', function 
     expect($product->current_stock)->toBe(7);
     $averageCostBefore = $product->average_cost_cents->formatted();
 
-    $response = $this->postJson("/api/vendas/{$sale['id']}/cancelar");
+    $response = $this->postJson("/api/vendas/{$sale['data']['id']}/cancelar");
 
     $response->assertOk();
     $product->refresh();
@@ -68,11 +68,23 @@ test('cancelling an already-cancelled sale returns 422', function () {
         'produtos' => [['id' => $product->id, 'quantidade' => 1, 'preco_unitario' => 20]],
     ], ['Idempotency-Key' => 'sale-4'])->json();
 
-    $this->postJson("/api/vendas/{$sale['id']}/cancelar")->assertOk();
-    $response = $this->postJson("/api/vendas/{$sale['id']}/cancelar");
+    $this->postJson("/api/vendas/{$sale['data']['id']}/cancelar")->assertOk();
+    $response = $this->postJson("/api/vendas/{$sale['data']['id']}/cancelar");
 
     $response->assertStatus(422);
     $response->assertJsonPath('message', 'Venda já cancelada');
+});
+
+test('preco_unitario with more than 2 decimal places is rejected with 422, not 500', function () {
+    $product = Product::factory()->create(['current_stock' => 10]);
+
+    $response = $this->postJson('/api/vendas', [
+        'cliente' => 'Cliente Decimal',
+        'produtos' => [['id' => $product->id, 'quantidade' => 1, 'preco_unitario' => '10.999']],
+    ], ['Idempotency-Key' => 'sale-decimal']);
+
+    $response->assertStatus(422);
+    $response->assertJsonValidationErrors('produtos.0.preco_unitario');
 });
 
 test('sales can be listed with items', function () {
