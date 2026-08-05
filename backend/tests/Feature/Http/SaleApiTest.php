@@ -1,0 +1,164 @@
+<?php
+
+use App\Models\Product;
+use App\Models\User;
+use App\ValueObjects\Money;
+
+beforeEach(function () {
+    \Laravel\Sanctum\Sanctum::actingAs(User::factory()->create());
+});
+
+test('registering a sale decreases stock and returns total and profit', function () {
+    $product = Product::factory()->create([
+        'current_stock' => 10,
+        'average_cost_cents' => Money::fromCents(3000),
+    ]);
+
+    $response = $this->postJson('/api/vendas', [
+        'cliente' => 'Fulano da Silva',
+        'produtos' => [['id' => $product->id, 'quantidade' => 2, 'preco_unitario' => 50]],
+    ], ['Idempotency-Key' => 'sale-1']);
+
+    $response->assertCreated();
+    $response->assertJsonPath('data.total', '100.00');
+    $response->assertJsonPath('data.lucro', '40.00');
+
+    $product->refresh();
+    expect($product->current_stock)->toBe(8);
+});
+
+test('selling more than the available stock returns the README-matching 422 message', function () {
+    $product = Product::factory()->create(['name' => 'Fone Bluetooth', 'current_stock' => 1]);
+
+    $response = $this->postJson('/api/vendas', [
+        'cliente' => 'Cliente Teste',
+        'produtos' => [['id' => $product->id, 'quantidade' => 5, 'preco_unitario' => 50]],
+    ], ['Idempotency-Key' => 'sale-2']);
+
+    $response->assertStatus(422);
+    $response->assertJsonPath('message', 'Estoque insuficiente para o produto Fone Bluetooth');
+
+    $product->refresh();
+    expect($product->current_stock)->toBe(1);
+});
+
+test('cancelling a sale reverses stock without touching average cost', function () {
+    $product = Product::factory()->create(['current_stock' => 10, 'average_cost_cents' => Money::fromCents(3000)]);
+    $sale = $this->postJson('/api/vendas', [
+        'cliente' => 'Cliente Cancela',
+        'produtos' => [['id' => $product->id, 'quantidade' => 3, 'preco_unitario' => 50]],
+    ], ['Idempotency-Key' => 'sale-3'])->json();
+
+    $product->refresh();
+    expect($product->current_stock)->toBe(7);
+    $averageCostBefore = $product->average_cost_cents->formatted();
+
+    $response = $this->postJson("/api/vendas/{$sale['data']['id']}/cancelar");
+
+    $response->assertOk();
+    $product->refresh();
+    expect($product->current_stock)->toBe(10);
+    expect($product->average_cost_cents->formatted())->toBe($averageCostBefore);
+});
+
+test('cancelling an already-cancelled sale returns 422', function () {
+    $product = Product::factory()->create(['current_stock' => 10]);
+    $sale = $this->postJson('/api/vendas', [
+        'cliente' => 'Cliente Dupla Cancela',
+        'produtos' => [['id' => $product->id, 'quantidade' => 1, 'preco_unitario' => 20]],
+    ], ['Idempotency-Key' => 'sale-4'])->json();
+
+    $this->postJson("/api/vendas/{$sale['data']['id']}/cancelar")->assertOk();
+    $response = $this->postJson("/api/vendas/{$sale['data']['id']}/cancelar");
+
+    $response->assertStatus(422);
+    $response->assertJsonPath('message', 'Venda já cancelada');
+});
+
+test('preco_unitario with more than 2 decimal places is rejected with 422, not 500', function () {
+    $product = Product::factory()->create(['current_stock' => 10]);
+
+    $response = $this->postJson('/api/vendas', [
+        'cliente' => 'Cliente Decimal',
+        'produtos' => [['id' => $product->id, 'quantidade' => 1, 'preco_unitario' => '10.999']],
+    ], ['Idempotency-Key' => 'sale-decimal']);
+
+    $response->assertStatus(422);
+    $response->assertJsonValidationErrors('produtos.0.preco_unitario');
+});
+
+test('sales can be listed with items', function () {
+    $product = Product::factory()->create(['current_stock' => 10]);
+    $this->postJson('/api/vendas', [
+        'cliente' => 'Cliente Lista',
+        'produtos' => [['id' => $product->id, 'quantidade' => 1, 'preco_unitario' => 20]],
+    ], ['Idempotency-Key' => 'sale-5']);
+
+    $response = $this->getJson('/api/vendas');
+
+    $response->assertOk();
+    $response->assertJsonStructure(['data' => [['id', 'cliente', 'total', 'lucro', 'produtos']]]);
+});
+
+test('preview projects total and profit without persisting or mutating stock', function () {
+    $product = Product::factory()->create([
+        'current_stock' => 10,
+        'average_cost_cents' => Money::fromCents(3000),
+    ]);
+
+    $response = $this->postJson('/api/vendas/preview', [
+        'produtos' => [['id' => $product->id, 'quantidade' => 2, 'preco_unitario' => 50]],
+    ]);
+
+    $response->assertOk();
+    $response->assertExactJson([
+        'total' => '100.00',
+        'lucro' => '40.00',
+        'itens' => [[
+            'id' => $product->id,
+            'nome' => $product->name,
+            'quantidade' => 2,
+            'preco_unitario' => '50.00',
+            'custo_medio' => '30.00',
+            'subtotal' => '100.00',
+            'lucro_item' => '40.00',
+        ]],
+    ]);
+
+    $product->refresh();
+    expect($product->current_stock)->toBe(10);
+});
+
+test('preview is a pure estimate and does not reject quantities above current stock', function () {
+    $product = Product::factory()->create(['current_stock' => 1, 'average_cost_cents' => Money::fromCents(500)]);
+
+    $response = $this->postJson('/api/vendas/preview', [
+        'produtos' => [['id' => $product->id, 'quantidade' => 99, 'preco_unitario' => 10]],
+    ]);
+
+    $response->assertOk();
+    $response->assertJsonPath('total', '990.00');
+    $product->refresh();
+    expect($product->current_stock)->toBe(1);
+});
+
+test('preview does not require an Idempotency-Key header', function () {
+    $product = Product::factory()->create(['current_stock' => 5, 'average_cost_cents' => Money::fromCents(1000)]);
+
+    $this->postJson('/api/vendas/preview', [
+        'produtos' => [['id' => $product->id, 'quantidade' => 1, 'preco_unitario' => 20]],
+    ])->assertOk();
+});
+
+test('preview rejects invalid payloads with 422', function () {
+    $this->postJson('/api/vendas/preview', ['produtos' => []])->assertStatus(422);
+
+    $this->postJson('/api/vendas/preview', [
+        'produtos' => [['id' => 99999, 'quantidade' => 1, 'preco_unitario' => 10]],
+    ])->assertStatus(422)->assertJsonValidationErrors('produtos.0.id');
+
+    $product = Product::factory()->create(['current_stock' => 5]);
+    $this->postJson('/api/vendas/preview', [
+        'produtos' => [['id' => $product->id, 'quantidade' => 1, 'preco_unitario' => '10.999']],
+    ])->assertStatus(422)->assertJsonValidationErrors('produtos.0.preco_unitario');
+});

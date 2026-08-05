@@ -1,0 +1,70 @@
+<?php
+
+use App\Models\User;
+
+beforeEach(function () {
+    \Laravel\Sanctum\Sanctum::actingAs(User::factory()->create());
+});
+
+test('a product can be created with the README fields', function () {
+    $response = $this->postJson('/api/produtos', ['nome' => 'Fone Bluetooth', 'preco_venda' => '99.90']);
+
+    $response->assertCreated();
+    $response->assertJson([
+        'data' => [
+            'nome' => 'Fone Bluetooth',
+            'preco_venda' => '99.90',
+            'custo_medio' => '0.00',
+            'estoque' => 0,
+        ],
+    ]);
+});
+
+test('a product can be created with an explicit estoque_inicial', function () {
+    $response = $this->postJson('/api/produtos', ['nome' => 'Fone Bluetooth', 'preco_venda' => '99.90', 'estoque_inicial' => 5]);
+
+    $response->assertCreated();
+    $response->assertJson([
+        'data' => [
+            'nome' => 'Fone Bluetooth',
+            'estoque' => 5,
+        ],
+    ]);
+});
+
+test('estoque_inicial cannot be negative', function () {
+    $response = $this->postJson('/api/produtos', ['nome' => 'Produto Teste', 'preco_venda' => '10.00', 'estoque_inicial' => -1]);
+
+    $response->assertStatus(422);
+    $response->assertJsonValidationErrors('estoque_inicial');
+});
+
+test('nome must be at least 3 characters', function () {
+    $response = $this->postJson('/api/produtos', ['nome' => 'Fo', 'preco_venda' => '10.00']);
+
+    $response->assertStatus(422);
+    $response->assertJsonValidationErrors('nome');
+});
+
+test('preco_venda must be positive', function () {
+    $response = $this->postJson('/api/produtos', ['nome' => 'Produto Teste', 'preco_venda' => '0']);
+
+    $response->assertStatus(422);
+    $response->assertJsonValidationErrors('preco_venda');
+});
+
+test('preco_venda with more than 2 decimal places is rejected with 422, not 500', function () {
+    $response = $this->postJson('/api/produtos', ['nome' => 'Produto Teste', 'preco_venda' => '10.999']);
+
+    $response->assertStatus(422);
+    $response->assertJsonValidationErrors('preco_venda');
+});
+
+test('products can be listed with id, nome, custo_medio, preco_venda, estoque', function () {
+    \App\Models\Product::factory()->create(['name' => 'Item A']);
+
+    $response = $this->getJson('/api/produtos');
+
+    $response->assertOk();
+    $response->assertJsonStructure(['data' => [['id', 'nome', 'custo_medio', 'preco_venda', 'estoque']]]);
+});
