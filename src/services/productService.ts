@@ -6,6 +6,6 @@ export const productService = {
     return http.get<{ data: Product[] }>('/produtos').then((r) => r.data.data)
   },
   create(payload: CreateProductPayload) {
-    return http.post<Product>('/produtos', payload).then((r) => r.data)
+    return http.post<{ data: Product }>('/produtos', payload).then((r) => r.data.data)
   },
 }

@@ -6,6 +6,6 @@ export const purchaseService = {
     return http.get<{ data: Purchase[] }>('/compras').then((r) => r.data.data)
   },
   create(payload: CreatePurchasePayload, idempotencyKey: string) {
-    return http.post<Purchase>('/compras', payload, { idempotencyKey }).then((r) => r.data)
+    return http.post<{ data: Purchase }>('/compras', payload, { idempotencyKey }).then((r) => r.data.data)
   },
 }

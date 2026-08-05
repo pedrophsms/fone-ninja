@@ -6,12 +6,12 @@ export const saleService = {
     return http.get<{ data: Sale[] }>('/vendas').then((r) => r.data.data)
   },
   create(payload: CreateSalePayload, idempotencyKey: string) {
-    return http.post<Sale>('/vendas', payload, { idempotencyKey }).then((r) => r.data)
+    return http.post<{ data: Sale }>('/vendas', payload, { idempotencyKey }).then((r) => r.data.data)
   },
   preview(payload: SalePreviewPayload) {
     return http.post<SalePreview>('/vendas/preview', payload).then((r) => r.data)
   },
   cancel(id: number) {
-    return http.post<Sale>(`/vendas/${id}/cancelar`).then((r) => r.data)
+    return http.post<{ data: Sale }>(`/vendas/${id}/cancelar`).then((r) => r.data.data)
   },
 }

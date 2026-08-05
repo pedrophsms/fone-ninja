@@ -29,7 +29,7 @@ describe('PurchasesView', () => {
     let callCount = 0
     mockHttp.onPost('/compras').reply(() => {
       callCount += 1
-      return [201, { id: 1, fornecedor: 'Fornecedor X', total: '50.00', produtos: [], created_at: '' }]
+      return [201, { data: { id: 1, fornecedor: 'Fornecedor X', total: '50.00', produtos: [], created_at: '' } }]
     })
     const productStore = useProductStore()
     productStore.items = [{ id: 1, nome: 'Fone X', custo_medio: '5.00', preco_venda: '10.00', estoque: 100 }]
