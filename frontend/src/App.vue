@@ -37,8 +37,8 @@ onMounted(initTheme)
     <AppToast />
     <template v-if="authStore.token">
       <div class="flex min-h-screen">
-        <aside class="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r bg-card md:flex">
-          <div class="flex flex-col gap-1 border-b px-6 py-6">
+        <aside class="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-border/40 bg-card/80 backdrop-blur-xl backdrop-saturate-150 md:flex">
+          <div class="flex flex-col gap-1 border-b border-border/40 px-6 py-6">
             <router-link to="/dashboard" class="flex items-baseline gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <span class="font-display text-2xl font-semibold tracking-tight text-foreground">FONE NINJA</span>
               <span class="text-sm text-brass">*</span>
@@ -51,7 +51,7 @@ onMounted(initTheme)
               v-for="item in navItems"
               :key="item.to"
               :to="item.to"
-              class="flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              class="nav-link flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97] active:transition-transform active:duration-75"
               :class="isActive(item.to) ? 'bg-secondary font-medium text-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'"
             >
               <component :is="item.icon" class="size-4 shrink-0" :class="isActive(item.to) ? 'text-brass' : ''" />
@@ -59,7 +59,7 @@ onMounted(initTheme)
             </router-link>
           </nav>
 
-          <div class="space-y-2 border-t px-4 py-4">
+          <div class="space-y-2 border-t border-border/40 px-4 py-4">
             <p class="truncate px-2 text-xs font-medium text-foreground">{{ userName }}</p>
             <div class="flex items-center justify-between">
               <button
@@ -85,7 +85,7 @@ onMounted(initTheme)
         </aside>
 
         <div class="flex min-w-0 flex-1 flex-col">
-          <header class="sticky top-0 z-40 flex items-center gap-3 border-b bg-card px-4 py-3 md:hidden">
+          <header class="sticky top-0 z-40 flex items-center gap-3 border-b border-border/40 bg-card/80 backdrop-blur-xl backdrop-saturate-150 px-4 py-3 md:hidden">
             <router-link to="/dashboard" class="flex items-baseline gap-1">
               <span class="font-display text-lg font-semibold text-foreground">FONE NINJA</span>
               <span class="text-xs text-brass">*</span>

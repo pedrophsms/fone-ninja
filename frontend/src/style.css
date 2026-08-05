@@ -110,3 +110,24 @@
     @apply bg-primary text-primary-foreground;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-link:active {
+    transform: none !important;
+    transition: none !important;
+  }
+  aside {
+    transition: none !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  aside {
+    background-color: var(--card) !important;
+    backdrop-filter: none;
+  }
+  header {
+    background-color: var(--card) !important;
+    backdrop-filter: none;
+  }
+}
