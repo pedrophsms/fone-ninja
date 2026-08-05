@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Route;
 Route::post('/registro', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', \App\Http\Middleware\AssignAuthenticatedUserToLogContext::class])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/produtos', [ProductsController::class, 'index']);
     Route::post('/produtos', [ProductsController::class, 'store']);

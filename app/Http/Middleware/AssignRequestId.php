@@ -14,9 +14,13 @@ class AssignRequestId
     {
         $requestId = $request->header('X-Request-Id') ?: (string) Str::uuid();
 
+        // Runs on the global middleware stack, before route-level
+        // auth:sanctum resolves the authenticated user, so user_id cannot be
+        // set here yet. It is added later by
+        // AssignAuthenticatedUserToLogContext, which runs inside the
+        // auth:sanctum route group.
         Log::shareContext([
             'request_id' => $requestId,
-            'user_id' => optional($request->user())->id,
         ]);
 
         $response = $next($request);
