@@ -34,7 +34,14 @@ class RegisterSaleAction
             $total = Money::zero();
             $profit = Money::zero();
 
-            foreach ($data->items as $item) {
+            // Lock products in a consistent (ascending productId) order to
+            // avoid a lock-ordering deadlock when two concurrent
+            // purchases/sales touch the same set of products in different
+            // orders (e.g. [1,2] vs [2,1]).
+            $items = $data->items;
+            usort($items, fn ($a, $b) => $a->productId <=> $b->productId);
+
+            foreach ($items as $item) {
                 $product = $this->products->findForUpdate($item->productId);
 
                 if ($item->quantity > $product->current_stock) {
