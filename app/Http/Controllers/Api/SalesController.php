@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Actions\Sale\CancelSaleAction;
+use App\Actions\Sale\PreviewSaleAction;
 use App\Actions\Sale\RegisterSaleAction;
 use App\DataTransferObjects\RegisterSaleData;
+use App\DataTransferObjects\SalePreviewData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\PreviewSaleRequest;
 use App\Http\Requests\StoreSaleRequest;
 use App\Http\Resources\SaleResource;
 use App\Repositories\Contracts\SaleRepositoryInterface;
@@ -69,6 +72,37 @@ class SalesController extends Controller
         );
 
         return (new SaleResource($sale))->response()->setStatusCode(201);
+    }
+
+    #[OA\Post(
+        path: '/vendas/preview',
+        summary: 'Projeta o total e o lucro estimado de uma venda sem gravá-la',
+        tags: ['Vendas'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['produtos'],
+                properties: [
+                    new OA\Property(property: 'produtos', type: 'array', items: new OA\Items(
+                        properties: [
+                            new OA\Property(property: 'id', type: 'integer', example: 1),
+                            new OA\Property(property: 'quantidade', type: 'integer', example: 2),
+                            new OA\Property(property: 'preco_unitario', type: 'number', format: 'float', example: 50.00),
+                        ],
+                    )),
+                ],
+            ),
+        ),
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Projeção de total e lucro (não persiste nada)'),
+            new OA\Response(response: 401, description: 'Não autenticado'),
+            new OA\Response(response: 422, description: 'Erro de validação'),
+        ],
+    )]
+    public function preview(PreviewSaleRequest $request, PreviewSaleAction $action): JsonResponse
+    {
+        return response()->json($action->execute(SalePreviewData::fromValidated($request->validated())));
     }
 
     #[OA\Post(

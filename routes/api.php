@@ -18,5 +18,6 @@ Route::middleware(['auth:sanctum', \App\Http\Middleware\AssignAuthenticatedUserT
     Route::post('/compras', [PurchasesController::class, 'store'])->middleware(['idempotent', 'throttle:financial']);
     Route::get('/vendas', [SalesController::class, 'index']);
     Route::post('/vendas', [SalesController::class, 'store'])->middleware(['idempotent', 'throttle:financial']);
+    Route::post('/vendas/preview', [SalesController::class, 'preview']);
     Route::post('/vendas/{id}/cancelar', [SalesController::class, 'cancel'])->middleware('throttle:financial');
 });

@@ -18,6 +18,11 @@ class EloquentProductRepository implements ProductRepositoryInterface
         return Product::query()->lockForUpdate()->findOrFail($id);
     }
 
+    public function findManyByIds(array $ids): array
+    {
+        return Product::query()->whereIn('id', $ids)->get()->keyBy('id')->all();
+    }
+
     public function paginate(int $perPage = 15): LengthAwarePaginator
     {
         return Product::query()->paginate($perPage);

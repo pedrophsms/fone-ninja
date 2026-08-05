@@ -99,3 +99,66 @@ test('sales can be listed with items', function () {
     $response->assertOk();
     $response->assertJsonStructure(['data' => [['id', 'cliente', 'total', 'lucro', 'produtos']]]);
 });
+
+test('preview projects total and profit without persisting or mutating stock', function () {
+    $product = Product::factory()->create([
+        'current_stock' => 10,
+        'average_cost_cents' => Money::fromCents(3000),
+    ]);
+
+    $response = $this->postJson('/api/vendas/preview', [
+        'produtos' => [['id' => $product->id, 'quantidade' => 2, 'preco_unitario' => 50]],
+    ]);
+
+    $response->assertOk();
+    $response->assertExactJson([
+        'total' => '100.00',
+        'lucro' => '40.00',
+        'itens' => [[
+            'id' => $product->id,
+            'nome' => $product->name,
+            'quantidade' => 2,
+            'preco_unitario' => '50.00',
+            'custo_medio' => '30.00',
+            'subtotal' => '100.00',
+            'lucro_item' => '40.00',
+        ]],
+    ]);
+
+    $product->refresh();
+    expect($product->current_stock)->toBe(10);
+});
+
+test('preview is a pure estimate and does not reject quantities above current stock', function () {
+    $product = Product::factory()->create(['current_stock' => 1, 'average_cost_cents' => Money::fromCents(500)]);
+
+    $response = $this->postJson('/api/vendas/preview', [
+        'produtos' => [['id' => $product->id, 'quantidade' => 99, 'preco_unitario' => 10]],
+    ]);
+
+    $response->assertOk();
+    $response->assertJsonPath('total', '990.00');
+    $product->refresh();
+    expect($product->current_stock)->toBe(1);
+});
+
+test('preview does not require an Idempotency-Key header', function () {
+    $product = Product::factory()->create(['current_stock' => 5, 'average_cost_cents' => Money::fromCents(1000)]);
+
+    $this->postJson('/api/vendas/preview', [
+        'produtos' => [['id' => $product->id, 'quantidade' => 1, 'preco_unitario' => 20]],
+    ])->assertOk();
+});
+
+test('preview rejects invalid payloads with 422', function () {
+    $this->postJson('/api/vendas/preview', ['produtos' => []])->assertStatus(422);
+
+    $this->postJson('/api/vendas/preview', [
+        'produtos' => [['id' => 99999, 'quantidade' => 1, 'preco_unitario' => 10]],
+    ])->assertStatus(422)->assertJsonValidationErrors('produtos.0.id');
+
+    $product = Product::factory()->create(['current_stock' => 5]);
+    $this->postJson('/api/vendas/preview', [
+        'produtos' => [['id' => $product->id, 'quantidade' => 1, 'preco_unitario' => '10.999']],
+    ])->assertStatus(422)->assertJsonValidationErrors('produtos.0.preco_unitario');
+});

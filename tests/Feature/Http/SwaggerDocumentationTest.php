@@ -24,6 +24,9 @@ test('the generated OpenAPI json describes the compras, vendas, and auth endpoin
     expect($json['paths'])->toHaveKey('/vendas');
     expect($json['paths']['/vendas'])->toHaveKeys(['get', 'post']);
 
+    expect($json['paths'])->toHaveKey('/vendas/preview');
+    expect($json['paths']['/vendas/preview'])->toHaveKey('post');
+
     expect($json['paths'])->toHaveKey('/vendas/{id}/cancelar');
     expect($json['paths']['/vendas/{id}/cancelar'])->toHaveKey('post');
 
