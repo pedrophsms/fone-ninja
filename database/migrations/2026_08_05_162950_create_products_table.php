@@ -12,14 +12,15 @@ return new class extends Migration
         Schema::create('products', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->integer('sale_price_cents');
-            $table->integer('average_cost_cents')->default(0);
-            $table->unsignedInteger('current_stock')->default(0);
+            $table->unsignedBigInteger('sale_price_cents');
+            $table->bigInteger('average_cost_cents')->default(0);
+            $table->unsignedBigInteger('current_stock')->default(0);
             $table->timestamps();
         });
 
         if (DB::getDriverName() === 'mysql') {
             DB::statement('ALTER TABLE products ADD CONSTRAINT chk_products_sale_price_positive CHECK (sale_price_cents > 0)');
+            DB::statement('ALTER TABLE products ADD CONSTRAINT chk_products_current_stock_non_negative CHECK (current_stock >= 0)');
         }
     }
 

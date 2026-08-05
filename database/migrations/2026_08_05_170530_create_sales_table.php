@@ -11,8 +11,8 @@ return new class extends Migration
         Schema::create('sales', function (Blueprint $table) {
             $table->id();
             $table->string('customer');
-            $table->integer('total_cents');
-            $table->integer('profit_cents');
+            $table->unsignedBigInteger('total_cents');
+            $table->bigInteger('profit_cents');
             $table->enum('status', ['completed', 'cancelled'])->default('completed');
             $table->timestamps();
         });

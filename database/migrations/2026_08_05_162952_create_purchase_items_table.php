@@ -14,8 +14,8 @@ return new class extends Migration
             $table->foreignId('purchase_id')->constrained()->restrictOnDelete();
             $table->foreignId('product_id')->constrained()->restrictOnDelete();
             $table->unsignedInteger('quantity');
-            $table->integer('unit_price_cents');
-            $table->integer('subtotal_cents');
+            $table->unsignedBigInteger('unit_price_cents');
+            $table->unsignedBigInteger('subtotal_cents');
             $table->timestamps();
         });
 

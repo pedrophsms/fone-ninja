@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('purchases', function (Blueprint $table) {
             $table->id();
             $table->string('supplier');
-            $table->integer('total_cents');
+            $table->unsignedBigInteger('total_cents');
             $table->timestamps();
         });
     }

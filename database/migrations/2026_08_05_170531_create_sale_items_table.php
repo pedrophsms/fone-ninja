@@ -14,10 +14,10 @@ return new class extends Migration
             $table->foreignId('sale_id')->constrained()->restrictOnDelete();
             $table->foreignId('product_id')->constrained()->restrictOnDelete();
             $table->unsignedInteger('quantity');
-            $table->integer('unit_price_cents');
-            $table->integer('average_cost_snapshot_cents');
-            $table->integer('subtotal_cents');
-            $table->integer('item_profit_cents');
+            $table->unsignedBigInteger('unit_price_cents');
+            $table->bigInteger('average_cost_snapshot_cents');
+            $table->unsignedBigInteger('subtotal_cents');
+            $table->bigInteger('item_profit_cents');
             $table->timestamps();
         });
 
