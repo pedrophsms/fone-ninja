@@ -7,3 +7,10 @@ dist-ssr
 !.env.example
 !.env.docker.example
 .DS_Store
+
+# skills instalados — regeneráveis via skills-lock.json
+.agents/
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/frontend-design/
