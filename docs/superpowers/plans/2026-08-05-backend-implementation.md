@@ -6,7 +6,7 @@
 
 **Architecture:** Controller → FormRequest → Action → Repository interface (DIP) → Service, with a Resource layer formatting output. FormRequests and Resources are the sole translation boundary between the Portuguese HTTP contract (routes, JSON keys, error messages) and English internal code.
 
-**Tech Stack:** Laravel 13, PHP 8.3, Laravel Sail (MySQL 8), Pest, Sanctum, l5-swagger.
+**Tech Stack:** Laravel 13, PHP 8.3, Laravel Sail (MySQL 8), Pest, Sanctum, l5-swagger, Laravel Boost (dev-only AI development/testing aid).
 
 ## Global Constraints
 
@@ -29,7 +29,7 @@
 - Modify: `.env`, `.env.example`
 
 **Interfaces:**
-- Produces: a runnable Laravel 13 app with Pest installed, Sanctum/API scaffolding installed (`routes/api.php` exists), and `php artisan test` green on the default example tests.
+- Produces: a runnable Laravel 13 app with Pest installed, Sanctum/API scaffolding installed (`routes/api.php` exists), Laravel Boost installed as a dev-only AI development/testing aid, and `php artisan test` green on the default example tests.
 
 - [ ] **Step 1: Create the Laravel project**
 
@@ -72,7 +72,18 @@ Open `phpunit.xml` and confirm (Laravel 13 ships this by default) it contains:
 
 If missing, add both `<env>` lines inside the `<php>` block.
 
-- [ ] **Step 6: Verify the app boots and the default test suite passes**
+- [ ] **Step 6: Install Laravel Boost (AI development/testing assistant)**
+
+[Laravel Boost](https://github.com/laravel/boost) is the official Laravel package that gives AI coding agents an MCP server (Tinker execution, DB query, log/browser inspection, version-aware doc search) plus a generated AI guidelines file — used here as a development/testing aid for the rest of this plan, not as an application dependency.
+
+```bash
+./vendor/bin/sail composer require laravel/boost --dev
+./vendor/bin/sail artisan boost:install
+```
+
+Answer the interactive prompts: select the editor/agent integration in use (this session's harness — pick "Claude Code" if listed, otherwise the closest generic MCP/editor option) and accept the default guideline set for Laravel/Pest/Sail. This writes an MCP server entry for the editor and an `AGENTS.md`/guidelines file at the project root — commit both.
+
+- [ ] **Step 7: Verify the app boots and the default test suite passes**
 
 ```bash
 ./vendor/bin/sail up -d
@@ -81,11 +92,11 @@ If missing, add both `<env>` lines inside the `<php>` block.
 
 Expected: all tests pass (the default `ExampleTest`/`Pest.php` smoke tests).
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add -A
-git commit -m "feat: scaffold Laravel 13 project with Sail, Pest, and API/Sanctum install"
+git commit -m "feat: scaffold Laravel 13 project with Sail, Pest, API/Sanctum install, and Laravel Boost"
 ```
 
 ---
