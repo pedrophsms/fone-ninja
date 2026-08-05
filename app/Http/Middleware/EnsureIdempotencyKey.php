@@ -5,7 +5,7 @@ namespace App\Http\Middleware;
 use App\Exceptions\IdempotencyKeyConflictException;
 use App\Models\IdempotencyKey;
 use Closure;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -20,11 +20,40 @@ class EnsureIdempotencyKey
         }
 
         $requestHash = hash('sha256', $request->getContent());
-        $existing = IdempotencyKey::where('key', $key)->first();
+        $userId = $request->user()->id;
 
-        if ($existing) {
-            if ($existing->request_hash !== $requestHash) {
+        // Insert a placeholder row FIRST, before running the route logic. The
+        // unique(user_id, key) constraint atomically arbitrates between
+        // concurrent requests carrying the same key: only one insert can
+        // succeed, so only one request can ever proceed to execute the
+        // financial write below. This closes the race where two concurrent
+        // requests both find "no existing row" and both commit a duplicate
+        // purchase/sale before either one's INSERT of the key row occurs.
+        try {
+            $record = IdempotencyKey::create([
+                'key' => $key,
+                'route' => $request->path(),
+                'request_hash' => $requestHash,
+                'response_status' => null,
+                'response_body' => null,
+                'user_id' => $userId,
+            ]);
+        } catch (UniqueConstraintViolationException) {
+            $existing = IdempotencyKey::where('user_id', $userId)->where('key', $key)->first();
+
+            if (! $existing || $existing->request_hash !== $requestHash) {
                 throw IdempotencyKeyConflictException::forKey($key);
+            }
+
+            if ($existing->response_status === null) {
+                // Another request with the identical key+body is still
+                // in-flight (its INSERT won the race but $next() hasn't
+                // finished yet). Rather than risk replaying a partial/absent
+                // response, or racing the in-flight request to write the
+                // financial record, we reject with 409 so the client retries.
+                return response()->json([
+                    'message' => 'Uma requisição com esta Idempotency-Key já está em processamento',
+                ], 409);
             }
 
             return response()->json($existing->response_body, $existing->response_status);
@@ -33,16 +62,10 @@ class EnsureIdempotencyKey
         /** @var Response $response */
         $response = $next($request);
 
-        if ($response->getStatusCode() < 400) {
-            IdempotencyKey::create([
-                'key' => $key,
-                'route' => $request->path(),
-                'request_hash' => $requestHash,
-                'response_status' => $response->getStatusCode(),
-                'response_body' => json_decode($response->getContent(), true),
-                'user_id' => $request->user()->id,
-            ]);
-        }
+        $record->update([
+            'response_status' => $response->getStatusCode(),
+            'response_body' => json_decode($response->getContent(), true),
+        ]);
 
         return $response;
     }

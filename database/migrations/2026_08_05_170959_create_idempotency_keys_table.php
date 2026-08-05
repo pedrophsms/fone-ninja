@@ -10,13 +10,15 @@ return new class extends Migration
     {
         Schema::create('idempotency_keys', function (Blueprint $table) {
             $table->id();
-            $table->string('key')->unique();
+            $table->string('key');
             $table->string('route');
             $table->string('request_hash');
-            $table->unsignedSmallInteger('response_status');
-            $table->json('response_body');
+            $table->unsignedSmallInteger('response_status')->nullable();
+            $table->json('response_body')->nullable();
             $table->foreignId('user_id')->constrained()->restrictOnDelete();
             $table->timestamp('created_at')->useCurrent();
+
+            $table->unique(['user_id', 'key']);
         });
     }
 
