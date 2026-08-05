@@ -7,6 +7,7 @@ use App\Models\IdempotencyKey;
 use Closure;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnsureIdempotencyKey
@@ -60,7 +61,16 @@ class EnsureIdempotencyKey
         }
 
         /** @var Response $response */
-        $response = $next($request);
+        try {
+            $response = $next($request);
+        } catch (\Throwable $e) {
+            // If the downstream handler throws, delete the placeholder row so
+            // a retry with the same key can succeed once the client fixes the
+            // issue that caused the failure. Without this, the row remains
+            // with response_status = null forever, poisoning future requests.
+            $record->delete();
+            throw $e;
+        }
 
         $record->update([
             'response_status' => $response->getStatusCode(),
