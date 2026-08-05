@@ -6,9 +6,14 @@
 # Usage:
 #   cp .env.example .env.docker   # then set DB_* below to match the `mysql`
 #                                  # service and APP_KEY (php artisan key:generate --show)
-#   docker compose -f docker-compose.yml up -d --build
-#   docker compose -f docker-compose.yml exec app php artisan migrate --force
+#   docker compose -f docker-compose.prod.yml up -d --build
+#   docker compose -f docker-compose.prod.yml exec app php artisan migrate --force
 #   curl http://localhost:8080/up
+#
+# Named docker-compose.prod.yml (not docker-compose.yml) so Docker Compose
+# doesn't treat it as a second "default" compose file alongside Sail's
+# compose.yaml — that pairing makes `sail` commands print a spurious
+# "Found multiple config files" warning on every invocation.
 #
 # IMPORTANT: an explicit `name:` is set below so this stack's containers,
 # network, and volumes never collide with Sail's (compose.yaml) containers,

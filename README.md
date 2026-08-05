@@ -1,58 +1,136 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Fone Ninja — Backend (ERP de Estoque)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+API Laravel 13 para o desafio técnico de ERP de estoque: cadastro de produtos, registro de compras (entrada de estoque + custo médio ponderado), registro de vendas (saída de estoque + lucro), cancelamento de vendas e listagens. Construída com práticas de nível sênior/fintech: Value Object `Money` (centavos inteiros), Idempotency-Key nos endpoints financeiros, registros append-only (sem DELETE), locks pessimistas + transações com retry, CHECK constraints no banco, rate limiting e correlação de requisições via logs.
 
-## About Laravel
+## Stack
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- PHP 8.4, Laravel 13
+- MySQL 8 (via Sail) para desenvolvimento; SQLite in-memory para a suíte de testes rápida
+- Pest para testes
+- Laravel Sanctum (autenticação por token)
+- Laravel Boost (auxílio de desenvolvimento/IA — dev-only)
+- darkaonline/l5-swagger (documentação OpenAPI)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Pré-requisitos
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- Docker + Docker Compose
+- (Opcional, só se rodar fora do Sail) PHP 8.4 e Composer localmente
 
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Configuração rápida (Sail — recomendado para desenvolvimento)
 
 ```bash
-composer require laravel/boost --dev
+git clone <repo-url> fone-ninja-backend
+cd fone-ninja-backend
 
-php artisan boost:install
+composer install          # requer PHP 8.4 local, ou pule e use o passo alternativo abaixo
+cp .env.example .env
+php artisan key:generate
+
+./vendor/bin/sail up -d
+./vendor/bin/sail artisan migrate --seed
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+**Sem PHP 8.4 local:** instale as dependências dentro de um container temporário antes do primeiro `sail up`:
 
-## Contributing
+```bash
+docker run --rm -v "$(pwd):/app" -w /app composer:2 install --ignore-platform-reqs
+cp .env.example .env
+./vendor/bin/sail up -d
+./vendor/bin/sail artisan key:generate
+./vendor/bin/sail artisan migrate --seed
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+A API sobe em `http://localhost` (porta 80) e o MySQL do Sail na porta 3306.
 
-## Code of Conduct
+Se essas portas já estiverem em uso por outro projeto, defina no `.env` antes do `sail up`:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```
+APP_PORT=8899
+FORWARD_DB_PORT=33061
+VITE_PORT=5174
+```
 
-## Security Vulnerabilities
+### Rodando os testes
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+./vendor/bin/sail artisan test
+```
 
-## License
+A suíte usa SQLite em memória (configurado em `phpunit.xml`), então roda rápido e não depende do MySQL do Sail. Alguns testes de CHECK constraint são pulados nesse driver (só são reforçados de fato no MySQL) — isso é esperado.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## Configuração via Docker puro (sem Sail — conforme requisito do desafio)
+
+O desafio original pede um compose file na raiz com Dockerfile do backend, independente do Sail. Esse setup (`docker-compose.prod.yml`) existe separado do Sail (que é a ferramenta de dev/teste) e sobe a aplicação em modo mais próximo de produção — o nome não é `docker-compose.yml` de propósito, pra não colidir com o `compose.yaml` do Sail (dois arquivos "padrão" no mesmo diretório fariam o Docker Compose reclamar em todo comando `sail`):
+
+```bash
+cp .env.example .env.docker
+# edite .env.docker: defina APP_KEY (veja abaixo) e as credenciais DB_* se quiser mudar os padrões
+
+php artisan key:generate --show   # copie o valor gerado para APP_KEY em .env.docker
+
+docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml exec app php artisan migrate --force
+```
+
+A API sobe em `http://localhost:8080` e o MySQL na porta `3307` — portas diferentes do Sail, para poder rodar os dois setups ao mesmo tempo sem conflito. Um `name:` explícito no compose evita colisão de containers/rede/volumes com o Sail.
+
+```bash
+curl http://localhost:8080/up   # healthcheck
+```
+
+## Autenticação
+
+A API usa Sanctum (token simples). Rotas e campos seguem o contrato do README original (em português):
+
+```bash
+# Registro
+curl -X POST http://localhost/api/registro \
+  -H "Content-Type: application/json" \
+  -d '{"nome":"Fulano","email":"fulano@example.com","senha":"12345678","senha_confirmation":"12345678"}'
+
+# Login
+curl -X POST http://localhost/api/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"fulano@example.com","senha":"12345678"}'
+```
+
+A resposta traz um token; use-o em `Authorization: Bearer <token>` nas demais chamadas.
+
+## Endpoints principais
+
+| Método | Rota                         | Descrição                                  |
+|--------|------------------------------|---------------------------------------------|
+| POST   | `/api/registro`              | Cria usuário                                |
+| POST   | `/api/login`                 | Autentica e retorna token                   |
+| POST   | `/api/logout`                | Revoga o token atual                        |
+| GET    | `/api/produtos`               | Lista produtos (paginado)                   |
+| POST   | `/api/produtos`               | Cria produto                                 |
+| GET    | `/api/compras`                | Lista compras (com itens)                   |
+| POST   | `/api/compras`                | Registra compra (requer `Idempotency-Key`)  |
+| GET    | `/api/vendas`                 | Lista vendas (com itens)                    |
+| POST   | `/api/vendas`                 | Registra venda (requer `Idempotency-Key`)   |
+| POST   | `/api/vendas/{id}/cancelar`   | Cancela venda (estorna estoque)             |
+
+Todas as rotas (exceto registro/login) exigem `Authorization: Bearer <token>`.
+
+`POST /api/compras` e `POST /api/vendas` exigem um cabeçalho `Idempotency-Key` (qualquer string única por requisição, ex. um UUID gerado pelo cliente) — reenviar a mesma chave com o mesmo corpo replica a resposta original em vez de duplicar o registro financeiro.
+
+## Documentação da API (Swagger / OpenAPI)
+
+Com a aplicação no ar:
+
+```bash
+./vendor/bin/sail artisan l5-swagger:generate   # regenera o spec, se necessário
+```
+
+UI disponível em `http://localhost/api/documentation`.
+
+## Dados de exemplo
+
+`php artisan migrate --seed` (ou `sail artisan migrate --seed`) cria um usuário de demonstração, produtos, uma compra e uma venda de exemplo — veja `database/seeders/DatabaseSeeder.php` para as credenciais/valores exatos.
+
+## Decisões de arquitetura
+
+Ver `docs/superpowers/specs/2026-08-05-backend-architecture-design.md` para a justificativa completa (Value Object Money, idempotência, append-only, locks/transações, CHECK constraints, rate limiting, observabilidade) e `docs/superpowers/plans/2026-08-05-backend-implementation.md` para o plano de implementação tarefa a tarefa.
+
+Resumo da arquitetura: `Controller → FormRequest → Action → Repository (interface, DIP) → Service`, com `Resource` formatando a saída. `FormRequest`/`Resource` são a única fronteira que fala português (rotas, campos JSON, mensagens de erro) — todo o resto do código (classes, métodos, migrations, logs) é em inglês.
