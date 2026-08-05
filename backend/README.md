@@ -18,9 +18,10 @@ API Laravel 13 para o desafio técnico de ERP de estoque: cadastro de produtos, 
 
 ## Configuração rápida (Sail — recomendado para desenvolvimento)
 
+O backend vive em `backend/` do repo consolidado `fone-ninja/`. Rode os comandos abaixo a partir dessa pasta.
+
 ```bash
-git clone <repo-url> fone-ninja-backend
-cd fone-ninja-backend
+cd backend
 
 composer install          # requer PHP 8.4 local, ou pule e use o passo alternativo abaixo
 cp .env.example .env
@@ -33,6 +34,7 @@ php artisan key:generate
 **Sem PHP 8.4 local:** instale as dependências dentro de um container temporário antes do primeiro `sail up`:
 
 ```bash
+cd backend
 docker run --rm -v "$(pwd):/app" -w /app composer:2 install --ignore-platform-reqs
 cp .env.example .env
 ./vendor/bin/sail up -d
@@ -60,9 +62,12 @@ A suíte usa SQLite em memória (configurado em `phpunit.xml`), então roda ráp
 
 ## Configuração via Docker puro (sem Sail — conforme requisito do desafio)
 
+O repo consolidado também traz um `docker-compose.yml` na raiz que sobe **frontend + backend + MySQL juntos** (o caminho recomendado para a demo completa — ver `frontend/README.md`). Esta seção cobre apenas o backend isolado, via `docker-compose.prod.yml`.
+
 O desafio original pede um compose file na raiz com Dockerfile do backend, independente do Sail. Esse setup (`docker-compose.prod.yml`) existe separado do Sail (que é a ferramenta de dev/teste) e sobe a aplicação em modo mais próximo de produção — o nome não é `docker-compose.yml` de propósito, pra não colidir com o `compose.yaml` do Sail (dois arquivos "padrão" no mesmo diretório fariam o Docker Compose reclamar em todo comando `sail`):
 
 ```bash
+cd backend
 cp .env.example .env.docker
 # edite .env.docker: defina APP_KEY (veja abaixo) e as credenciais DB_* se quiser mudar os padrões
 
@@ -109,6 +114,7 @@ A resposta traz um token; use-o em `Authorization: Bearer <token>` nas demais ch
 | POST   | `/api/compras`                | Registra compra (requer `Idempotency-Key`)  |
 | GET    | `/api/vendas`                 | Lista vendas (com itens)                    |
 | POST   | `/api/vendas`                 | Registra venda (requer `Idempotency-Key`)   |
+| POST   | `/api/vendas/preview`         | Projeta total e lucro estimado (sem gravar) |
 | POST   | `/api/vendas/{id}/cancelar`   | Cancela venda (estorna estoque)             |
 
 Todas as rotas (exceto registro/login) exigem `Authorization: Bearer <token>`.
