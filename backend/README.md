@@ -1,6 +1,6 @@
 # Fone Ninja — Backend (ERP de Estoque)
 
-API Laravel 13 para o desafio técnico de ERP de estoque: cadastro de produtos, registro de compras (entrada de estoque + custo médio ponderado), registro de vendas (saída de estoque + lucro), cancelamento de vendas e listagens. Construída com práticas de nível sênior/fintech: Value Object `Money` (centavos inteiros), Idempotency-Key nos endpoints financeiros, registros append-only (sem DELETE), locks pessimistas + transações com retry, CHECK constraints no banco, rate limiting e correlação de requisições via logs.
+API Laravel 13 para o desafio técnico de ERP de estoque: cadastro de produtos, registro de compras (entrada de estoque + custo médio ponderado), registro de vendas (saída de estoque + lucro), cancelamento de vendas e listagens. Construída com práticas de nível fintech: Value Object `Money` (centavos inteiros), Idempotency-Key nos endpoints financeiros, registros append-only (sem DELETE), locks pessimistas + transações com retry, CHECK constraints no banco, rate limiting e correlação de requisições via logs.
 
 ## Stack
 
@@ -11,10 +11,14 @@ API Laravel 13 para o desafio técnico de ERP de estoque: cadastro de produtos, 
 - Laravel Boost (auxílio de desenvolvimento/IA — dev-only)
 - darkaonline/l5-swagger (documentação OpenAPI)
 
+
+
 ## Pré-requisitos
 
 - Docker + Docker Compose
 - (Opcional, só se rodar fora do Sail) PHP 8.4 e Composer localmente
+
+
 
 ## Configuração rápida (Sail — recomendado para desenvolvimento)
 
@@ -52,6 +56,8 @@ FORWARD_DB_PORT=33061
 VITE_PORT=5174
 ```
 
+
+
 ### Rodando os testes
 
 ```bash
@@ -83,6 +89,8 @@ A API sobe em `http://localhost:8080` e o MySQL na porta `3307` — portas difer
 curl http://localhost:8080/up   # healthcheck
 ```
 
+
+
 ## Autenticação
 
 A API usa Sanctum (token simples). Rotas e campos seguem o contrato do README original (em português):
@@ -103,19 +111,21 @@ A resposta traz um token; use-o em `Authorization: Bearer <token>` nas demais ch
 
 ## Endpoints principais
 
-| Método | Rota                         | Descrição                                  |
-|--------|------------------------------|---------------------------------------------|
-| POST   | `/api/registro`              | Cria usuário                                |
-| POST   | `/api/login`                 | Autentica e retorna token                   |
-| POST   | `/api/logout`                | Revoga o token atual                        |
-| GET    | `/api/produtos`               | Lista produtos (paginado)                   |
-| POST   | `/api/produtos`               | Cria produto                                 |
-| GET    | `/api/compras`                | Lista compras (com itens)                   |
-| POST   | `/api/compras`                | Registra compra (requer `Idempotency-Key`)  |
-| GET    | `/api/vendas`                 | Lista vendas (com itens)                    |
-| POST   | `/api/vendas`                 | Registra venda (requer `Idempotency-Key`)   |
-| POST   | `/api/vendas/preview`         | Projeta total e lucro estimado (sem gravar) |
-| POST   | `/api/vendas/{id}/cancelar`   | Cancela venda (estorna estoque)             |
+
+| Método | Rota                        | Descrição                                   |
+| ------ | --------------------------- | ------------------------------------------- |
+| POST   | `/api/registro`             | Cria usuário                                |
+| POST   | `/api/login`                | Autentica e retorna token                   |
+| POST   | `/api/logout`               | Revoga o token atual                        |
+| GET    | `/api/produtos`             | Lista produtos (paginado)                   |
+| POST   | `/api/produtos`             | Cria produto                                |
+| GET    | `/api/compras`              | Lista compras (com itens)                   |
+| POST   | `/api/compras`              | Registra compra (requer `Idempotency-Key`)  |
+| GET    | `/api/vendas`               | Lista vendas (com itens)                    |
+| POST   | `/api/vendas`               | Registra venda (requer `Idempotency-Key`)   |
+| POST   | `/api/vendas/preview`       | Projeta total e lucro estimado (sem gravar) |
+| POST   | `/api/vendas/{id}/cancelar` | Cancela venda (estorna estoque)             |
+
 
 Todas as rotas (exceto registro/login) exigem `Authorization: Bearer <token>`.
 
