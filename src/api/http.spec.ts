@@ -1,8 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
 import MockAdapter from 'axios-mock-adapter'
 import { http } from './http'
 
 describe('http error normalization', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
   it('extracts fieldErrors from a 422 validation response', async () => {
     const mock = new MockAdapter(http)
     mock.onPost('/produtos').reply(422, {
