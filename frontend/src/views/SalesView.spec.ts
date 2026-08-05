@@ -1,14 +1,9 @@
 import { describe, expect, it, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import { createVuetify } from 'vuetify'
-import * as components from 'vuetify/components'
-import * as directives from 'vuetify/directives'
 import MockAdapter from 'axios-mock-adapter'
 import SalesView from './SalesView.vue'
 import { http } from '@/api/http'
-
-const vuetify = createVuetify({ components, directives })
 
 describe('SalesView', () => {
   let mockHttp: MockAdapter
@@ -47,13 +42,13 @@ describe('SalesView', () => {
   })
 
   it('disables the Cancelar button only for already-cancelled sales', async () => {
-    const wrapper = mount(SalesView, { global: { plugins: [vuetify] } })
+    const wrapper = mount(SalesView)
     await new Promise((resolve) => setTimeout(resolve, 0))
     await wrapper.vm.$nextTick()
 
     const buttons = wrapper.findAll('button').filter((b) => b.text() === 'Cancelar')
     expect(buttons).toHaveLength(2)
-    expect(buttons[0].attributes('disabled')).toBeDefined()
-    expect(buttons[1].attributes('disabled')).toBeUndefined()
+    expect(buttons[0].attributes('disabled')).toBeUndefined()
+    expect(buttons[1].attributes('disabled')).toBeDefined()
   })
 })

@@ -1,15 +1,10 @@
 import { describe, expect, it, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import { createVuetify } from 'vuetify'
-import * as components from 'vuetify/components'
-import * as directives from 'vuetify/directives'
 import MockAdapter from 'axios-mock-adapter'
 import PurchasesView from './PurchasesView.vue'
 import { http } from '@/api/http'
 import { useProductStore } from '@/stores/product'
-
-const vuetify = createVuetify({ components, directives })
 
 describe('PurchasesView', () => {
   let mockHttp: MockAdapter
@@ -34,7 +29,7 @@ describe('PurchasesView', () => {
     const productStore = useProductStore()
     productStore.items = [{ id: 1, nome: 'Fone X', custo_medio: '5.00', preco_venda: '10.00', estoque: 100 }]
 
-    const wrapper = mount(PurchasesView, { global: { plugins: [vuetify] } })
+    const wrapper = mount(PurchasesView)
     await wrapper.vm.$nextTick()
 
     const form = wrapper.vm as unknown as {

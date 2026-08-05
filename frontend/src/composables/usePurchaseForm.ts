@@ -17,6 +17,7 @@ export function usePurchaseForm() {
   })
   const errors = reactive<Record<string, string[]>>({})
   const loading = ref(false)
+  const submitted = ref(false)
   const purchaseStore = usePurchaseStore()
   const productStore = useProductStore()
   const { handle } = useApiError()
@@ -61,6 +62,7 @@ export function usePurchaseForm() {
     try {
       await purchaseStore.create({ fornecedor: form.fornecedor, produtos: form.produtos }, idempotencyKey)
       snackbar.showSuccess('Compra registrada com sucesso')
+      submitted.value = true
       form.fornecedor = ''
       form.produtos = [{ id: 0, quantidade: 1, preco_unitario: 0 }]
       await productStore.fetchAll()
@@ -72,5 +74,5 @@ export function usePurchaseForm() {
     }
   }
 
-  return { form, errors, loading, subtotalPreview, addItem, removeItem, submit }
+  return { form, errors, loading, submitted, subtotalPreview, addItem, removeItem, submit }
 }

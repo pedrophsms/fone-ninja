@@ -17,6 +17,7 @@ export function useSaleForm() {
   })
   const errors = reactive<Record<string, string[]>>({})
   const loading = ref(false)
+  const submitted = ref(false)
   const preview = ref<SalePreview | null>(null)
   const saleStore = useSaleStore()
   const productStore = useProductStore()
@@ -79,6 +80,7 @@ export function useSaleForm() {
       snackbar.showSuccess(
         `Venda registrada com sucesso — total ${created.total}, lucro ${created.lucro}`,
       )
+      submitted.value = true
       form.cliente = ''
       form.produtos = [{ id: 0, quantidade: 1, preco_unitario: 0 }]
       preview.value = null
@@ -91,5 +93,5 @@ export function useSaleForm() {
     }
   }
 
-  return { form, errors, loading, preview, addItem, removeItem, submit }
+  return { form, errors, loading, submitted, preview, addItem, removeItem, submit }
 }

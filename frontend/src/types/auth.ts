@@ -3,6 +3,13 @@ export interface LoginPayload {
   senha: string
 }
 
+export interface RegisterPayload {
+  nome: string
+  email: string
+  senha: string
+  senha_confirmation: string
+}
+
 export interface AuthUser {
   id: number
   nome: string

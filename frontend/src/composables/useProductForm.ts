@@ -14,6 +14,7 @@ export function useProductForm() {
   const form = reactive<ProductFormState>({ nome: '', preco_venda: null, estoque_inicial: null })
   const errors = reactive<Record<string, string[]>>({})
   const loading = ref(false)
+  const submitted = ref(false)
   const productStore = useProductStore()
   const { handle } = useApiError()
   const snackbar = useSnackbarStore()
@@ -45,6 +46,7 @@ export function useProductForm() {
       }
       await productStore.create(payload)
       snackbar.showSuccess('Produto cadastrado com sucesso')
+      submitted.value = true
       form.nome = ''
       form.preco_venda = null
       form.estoque_inicial = null
@@ -56,5 +58,5 @@ export function useProductForm() {
     }
   }
 
-  return { form, errors, loading, submit }
+  return { form, errors, loading, submitted, submit }
 }
