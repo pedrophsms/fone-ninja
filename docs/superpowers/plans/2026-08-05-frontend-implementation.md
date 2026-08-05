@@ -10,13 +10,14 @@
 
 ## Global Constraints
 
-- API contract fields stay in Portuguese exactly as the backend defines them: `nome`, `preco_venda`, `custo_medio`, `estoque`, `quantidade`, `preco_unitario`, `fornecedor`, `cliente`, `lucro`, `senha`. Everything else (variables, function names, file names, comments) is English.
+- API contract fields stay in Portuguese exactly as the backend defines them: `nome`, `preco_venda`, `custo_medio`, `estoque`, `quantidade`, `preco_unitario`, `fornecedor`, `cliente`, `lucro`, `senha`. Everything else (variables, function names, file names, comments) is English. Purchase/sale item resources serialize the product as `id` + `nome` (not `produto_id`/`produto_nome`), and there is no per-item profit field — `lucro` exists only at the sale level.
 - `VITE_API_BASE_URL` defaults to `http://localhost/api` (Laravel Sail default port 80, per `fone-ninja-backend/.env` `APP_PORT` default).
-- Seeded login credentials for manual/evaluator testing: `email: test@example.com`, `senha: password` (from the backend's `DatabaseSeeder` + `UserFactory` default).
-- No calculation logic (average cost, profit) is duplicated client-side. The only client-side arithmetic allowed is the raw subtotal preview (`quantidade * preco_unitario` summed), never profit.
+- Seeded login credentials for manual/evaluator testing: `email: demo@fone-ninja.test`, `senha: password123` (from the backend's `DatabaseSeeder` — the `UserFactory` default `password` is irrelevant because the seeder never uses the factory).
+- No calculation logic (average cost, profit) runs client-side. The sale form's live "total e lucro estimado" readout is served by the backend preview endpoint `POST /api/vendas/preview` (computes total + lucro from current average cost without persisting) — it never comes from client arithmetic. The purchase form keeps its raw subtotal preview over user-typed inputs (`quantidade * preco_unitario` summed, no profit) as before.
+- Sale preview is served by the backend endpoint `POST /api/vendas/preview`, **already implemented** in `fone-ninja-backend` (commit `23da51e`): auth via `auth:sanctum`, no `Idempotency-Key`, request `{ "produtos": [{ "id", "quantidade", "preco_unitario" }] }`, response `{ total, lucro, itens: [{ id, nome, quantidade, preco_unitario, custo_medio, subtotal, lucro_item }] }` with all money fields as 2-decimal strings via `Money::formatted()`. No stock check and no DB writes — read-only estimate reusing `ProfitCalculatorService`, bulk product fetch (no N+1), 404 if a product vanishes mid-request. Covered by 4 feature tests + 1 DTO unit test in the backend suite.
 - Idempotency key: generated once per user submission inside `usePurchaseForm`/`useSaleForm`, passed explicitly to the service call. The Axios interceptor only forwards a key if one is present on the request config — it never generates one.
 - Submit buttons bind to a `loading` ref and disable while a request is in flight.
-- All money values cross the wire as plain decimal numbers (e.g. `20.5`), matching the backend's `Money::formatted()` boundary — no cents-integer handling needed client-side.
+- Every money field the backend serializes (response-side `custo_medio`, `preco_venda`, `total`, `lucro`, `subtotal`, response `preco_unitario`) crosses the wire as a **2-decimal JSON string** (e.g. `"20.50"`) because `Money::formatted()` returns `number_format($this->cents / 100, 2, '.', '')`. These fields are typed `string` in the response types. Request payload numbers the user types (`preco_unitario`) stay `number`. No cents-integer handling and no string→number conversion needed client-side.
 - Path alias `@` resolves to `src/`.
 
 ---
@@ -183,19 +184,19 @@ export interface CreatePurchasePayload {
 }
 
 export interface PurchaseItem {
-  produto_id: number
-  produto_nome: string
+  id: number
+  nome: string
   quantidade: number
-  preco_unitario: number
-  subtotal: number
+  preco_unitario: string
+  subtotal: string
 }
 
 export interface Purchase {
   id: number
   fornecedor: string
-  total: number
+  total: string
   produtos: PurchaseItem[]
-  created_at: string
+  created_at?: string
 }
 ```
 
@@ -214,12 +215,11 @@ export interface CreateSalePayload {
 }
 
 export interface SaleItem {
-  produto_id: number
-  produto_nome: string
+  id: number
+  nome: string
   quantidade: number
-  preco_unitario: number
-  subtotal: number
-  lucro_item: number
+  preco_unitario: string
+  subtotal: string
 }
 
 export type SaleStatus = 'completed' | 'cancelled'
@@ -227,11 +227,31 @@ export type SaleStatus = 'completed' | 'cancelled'
 export interface Sale {
   id: number
   cliente: string
-  total: number
-  lucro: number
+  total: string
+  lucro: string
   status: SaleStatus
   produtos: SaleItem[]
-  created_at: string
+  created_at?: string
+}
+
+export interface SalePreviewPayload {
+  produtos: SaleItemPayload[]
+}
+
+export interface SalePreviewItem {
+  id: number
+  nome: string
+  quantidade: number
+  preco_unitario: string
+  custo_medio: string
+  subtotal: string
+  lucro_item: string
+}
+
+export interface SalePreview {
+  total: string
+  lucro: string
+  itens: SalePreviewItem[]
 }
 ```
 
@@ -390,6 +410,9 @@ function normalizeError(error: unknown): ApiError {
     }
     if (status === 401) {
       return { message: 'Sessão expirada, faça login novamente' }
+    }
+    if (status === 429) {
+      return { message: 'Muitas tentativas, aguarde um momento e tente novamente' }
     }
     return { message: 'Erro de comunicação com o servidor' }
   }
@@ -1166,7 +1189,7 @@ describe('usePurchaseForm', () => {
     vi.spyOn(purchaseStore, 'create').mockResolvedValue({
       id: 1,
       fornecedor: 'Fornecedor X',
-      total: 50,
+      total: '50.00',
       produtos: [],
       created_at: '2026-08-05T00:00:00Z',
     })
@@ -1326,7 +1349,7 @@ Expected: PASS (3 tests)
 
     <v-data-table :items="purchaseStore.items" :loading="purchaseStore.loading" :headers="headers">
       <template #item.produtos="{ item }">
-        {{ item.produtos.map((p) => `${p.produto_nome} x${p.quantidade}`).join(', ') }}
+        {{ item.produtos.map((p) => `${p.nome} x${p.quantidade}`).join(', ') }}
       </template>
     </v-data-table>
   </div>
@@ -1346,7 +1369,6 @@ const headers = [
   { title: 'Fornecedor', key: 'fornecedor' },
   { title: 'Total', key: 'total' },
   { title: 'Itens', key: 'produtos', sortable: false },
-  { title: 'Data', key: 'created_at' },
 ]
 
 onMounted(() => {
@@ -1365,7 +1387,7 @@ git commit -m "feat: add purchase domain (service, store, form, view)"
 
 ---
 
-### Task 8: Sale Domain (Service, Store, Form, View, Cancel)
+### Task 8: Sale Domain (Service, Store, Form, View, Preview, Cancel)
 
 **Files:**
 - Create: `src/services/saleService.ts`
@@ -1375,15 +1397,15 @@ git commit -m "feat: add purchase domain (service, store, form, view)"
 - Test: `src/composables/useSaleForm.spec.ts`
 
 **Interfaces:**
-- Consumes: `http` (Task 3), `Sale`/`CreateSalePayload`/`SaleItemPayload` (Task 2), `useApiError`/`useSnackbarStore` (Task 4), `useProductStore` (Task 6).
-- Produces: `useSaleStore()` with state `{ items: Sale[]; loading: boolean }` and actions `fetchAll()` / `create(payload, idempotencyKey)` / `cancel(id)`.
+- Consumes: `http` (Task 3), `Sale`/`CreateSalePayload`/`SaleItemPayload`/`SalePreview`/`SalePreviewPayload` (Task 2), `useApiError`/`useSnackbarStore` (Task 4), `useProductStore` (Task 6).
+- Produces: `useSaleStore()` with state `{ items: Sale[]; loading: boolean }` and actions `fetchAll()` / `create(payload, idempotencyKey)` / `cancel(id)` / `preview(payload)`.
 
 - [ ] **Step 1: Create `saleService`**
 
 ```ts
 // src/services/saleService.ts
 import { http } from '@/api/http'
-import type { CreateSalePayload, Sale } from '@/types/sale'
+import type { CreateSalePayload, Sale, SalePreview, SalePreviewPayload } from '@/types/sale'
 
 export const saleService = {
   list() {
@@ -1391,6 +1413,9 @@ export const saleService = {
   },
   create(payload: CreateSalePayload, idempotencyKey: string) {
     return http.post<Sale>('/vendas', payload, { idempotencyKey }).then((r) => r.data)
+  },
+  preview(payload: SalePreviewPayload) {
+    return http.post<SalePreview>('/vendas/preview', payload).then((r) => r.data)
   },
   cancel(id: number) {
     return http.post<Sale>(`/vendas/${id}/cancelar`).then((r) => r.data)
@@ -1404,7 +1429,7 @@ export const saleService = {
 // src/stores/sale.ts
 import { defineStore } from 'pinia'
 import { saleService } from '@/services/saleService'
-import type { CreateSalePayload, Sale } from '@/types/sale'
+import type { CreateSalePayload, Sale, SalePreview, SalePreviewPayload } from '@/types/sale'
 
 interface SaleState {
   items: Sale[]
@@ -1433,6 +1458,9 @@ export const useSaleStore = defineStore('sale', {
       if (index !== -1) this.items[index] = cancelled
       return cancelled
     },
+    async preview(payload: SalePreviewPayload): Promise<SalePreview> {
+      return saleService.preview(payload)
+    },
   },
 })
 ```
@@ -1442,6 +1470,7 @@ export const useSaleStore = defineStore('sale', {
 ```ts
 // src/composables/useSaleForm.spec.ts
 import { describe, expect, it, beforeEach, vi } from 'vitest'
+import { flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { useSaleForm } from './useSaleForm'
 import { useSaleStore } from '@/stores/sale'
@@ -1457,6 +1486,7 @@ describe('useSaleForm', () => {
     const { form, errors, submit } = useSaleForm()
     const saleStore = useSaleStore()
     vi.spyOn(saleStore, 'create')
+    vi.spyOn(saleStore, 'preview').mockResolvedValue({ total: '0.00', lucro: '0.00', itens: [] })
     form.cliente = 'Fulano da Silva'
     form.produtos = [
       { id: 1, quantidade: 2, preco_unitario: 50 },
@@ -1474,11 +1504,12 @@ describe('useSaleForm', () => {
     const saleStore = useSaleStore()
     const productStore = useProductStore()
     const snackbar = useSnackbarStore()
+    vi.spyOn(saleStore, 'preview').mockResolvedValue({ total: '100.00', lucro: '30.00', itens: [] })
     vi.spyOn(saleStore, 'create').mockResolvedValue({
       id: 1,
       cliente: 'Fulano da Silva',
-      total: 100,
-      lucro: 30,
+      total: '100.00',
+      lucro: '30.00',
       status: 'completed',
       produtos: [],
       created_at: '2026-08-05T00:00:00Z',
@@ -1498,6 +1529,7 @@ describe('useSaleForm', () => {
     const { form, submit } = useSaleForm()
     const saleStore = useSaleStore()
     const snackbar = useSnackbarStore()
+    vi.spyOn(saleStore, 'preview').mockResolvedValue({ total: '0.00', lucro: '0.00', itens: [] })
     vi.spyOn(saleStore, 'create').mockRejectedValue({
       message: 'Estoque insuficiente para o produto Fone X',
     })
@@ -1508,6 +1540,35 @@ describe('useSaleForm', () => {
 
     expect(snackbar.visible).toBe(true)
     expect(snackbar.message).toBe('Estoque insuficiente para o produto Fone X')
+  })
+
+  it('loads the total and lucro estimate from the backend preview when products change', async () => {
+    const { form, preview } = useSaleForm()
+    const saleStore = useSaleStore()
+    vi.spyOn(saleStore, 'preview').mockResolvedValue({
+      total: '100.00',
+      lucro: '30.00',
+      itens: [
+        {
+          id: 1,
+          nome: 'Fone X',
+          quantidade: 2,
+          preco_unitario: '50.00',
+          custo_medio: '35.00',
+          subtotal: '100.00',
+          lucro_item: '30.00',
+        },
+      ],
+    })
+    form.produtos = [{ id: 1, quantidade: 2, preco_unitario: 50 }]
+
+    await flushPromises()
+
+    expect(saleStore.preview).toHaveBeenCalledWith({
+      produtos: [{ id: 1, quantidade: 2, preco_unitario: 50 }],
+    })
+    expect(preview.value?.total).toBe('100.00')
+    expect(preview.value?.lucro).toBe('30.00')
   })
 })
 ```
@@ -1521,12 +1582,12 @@ Expected: FAIL — `src/composables/useSaleForm.ts` does not exist yet.
 
 ```ts
 // src/composables/useSaleForm.ts
-import { computed, reactive, ref } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import { useSaleStore } from '@/stores/sale'
 import { useProductStore } from '@/stores/product'
 import { useApiError } from '@/composables/useApiError'
 import { useSnackbarStore } from '@/stores/snackbar'
-import type { SaleItemPayload } from '@/types/sale'
+import type { SaleItemPayload, SalePreview } from '@/types/sale'
 
 interface SaleFormState {
   cliente: string
@@ -1540,13 +1601,26 @@ export function useSaleForm() {
   })
   const errors = reactive<Record<string, string[]>>({})
   const loading = ref(false)
+  const preview = ref<SalePreview | null>(null)
   const saleStore = useSaleStore()
   const productStore = useProductStore()
   const { handle } = useApiError()
   const snackbar = useSnackbarStore()
 
-  const subtotalPreview = computed(() =>
-    form.produtos.reduce((sum, item) => sum + item.quantidade * item.preco_unitario, 0),
+  watch(
+    () => form.produtos.map((item) => `${item.id}:${item.quantidade}:${item.preco_unitario}`).join('|'),
+    async () => {
+      const selected = form.produtos.filter((item) => item.id)
+      if (selected.length === 0) {
+        preview.value = null
+        return
+      }
+      try {
+        preview.value = await saleStore.preview({ produtos: form.produtos })
+      } catch {
+        preview.value = null
+      }
+    },
   )
 
   function addItem() {
@@ -1590,6 +1664,7 @@ export function useSaleForm() {
       )
       form.cliente = ''
       form.produtos = [{ id: 0, quantidade: 1, preco_unitario: 0 }]
+      preview.value = null
       await productStore.fetchAll()
     } catch (error) {
       const fieldErrors = handle(error)
@@ -1599,14 +1674,14 @@ export function useSaleForm() {
     }
   }
 
-  return { form, errors, loading, subtotalPreview, addItem, removeItem, submit }
+  return { form, errors, loading, preview, addItem, removeItem, submit }
 }
 ```
 
 - [ ] **Step 6: Run the test to verify it passes**
 
 Run: `npx vitest run src/composables/useSaleForm.spec.ts`
-Expected: PASS (3 tests)
+Expected: PASS (4 tests)
 
 - [ ] **Step 7: Create `SalesView.vue`**
 
@@ -1647,7 +1722,9 @@ Expected: PASS (3 tests)
           <p v-if="errors.produtos" class="text-error text-caption">{{ errors.produtos[0] }}</p>
 
           <v-btn variant="text" @click="addItem">Adicionar produto</v-btn>
-          <p class="text-subtitle-1">Subtotal estimado: {{ subtotalPreview }}</p>
+          <p v-if="preview" class="text-subtitle-1">
+            Total estimado: {{ preview.total }} · Lucro estimado: {{ preview.lucro }}
+          </p>
 
           <v-btn type="submit" color="primary" :loading="loading" :disabled="loading">
             Registrar venda
@@ -1679,7 +1756,7 @@ import { useProductStore } from '@/stores/product'
 import { useApiError } from '@/composables/useApiError'
 import { useSnackbarStore } from '@/stores/snackbar'
 
-const { form, errors, loading, subtotalPreview, addItem, removeItem, submit } = useSaleForm()
+const { form, errors, loading, preview, addItem, removeItem, submit } = useSaleForm()
 const saleStore = useSaleStore()
 const productStore = useProductStore()
 const { handle } = useApiError()
@@ -1765,7 +1842,7 @@ describe('PurchasesView', () => {
     let callCount = 0
     mockHttp.onPost('/compras').reply(() => {
       callCount += 1
-      return [201, { id: 1, fornecedor: 'Fornecedor X', total: 50, produtos: [], created_at: '' }]
+      return [201, { id: 1, fornecedor: 'Fornecedor X', total: '50.00', produtos: [], created_at: '' }]
     })
     const productStore = useProductStore()
     productStore.items = [{ id: 1, nome: 'Fone X', custo_medio: 5, preco_venda: 10, estoque: 100 }]
@@ -1851,13 +1928,14 @@ describe('SalesView', () => {
     setActivePinia(createPinia())
     mockHttp = new MockAdapter(http)
     mockHttp.onGet('/produtos').reply(200, { data: [] })
+    mockHttp.onPost('/vendas/preview').reply(200, { total: '0.00', lucro: '0.00', itens: [] })
     mockHttp.onGet('/vendas').reply(200, {
       data: [
         {
           id: 1,
           cliente: 'Fulano da Silva',
-          total: 100,
-          lucro: 30,
+          total: '100.00',
+          lucro: '30.00',
           status: 'cancelled',
           produtos: [],
           created_at: '',
@@ -1865,8 +1943,8 @@ describe('SalesView', () => {
         {
           id: 2,
           cliente: 'Ciclano',
-          total: 200,
-          lucro: 60,
+          total: '200.00',
+          lucro: '60.00',
           status: 'completed',
           produtos: [],
           created_at: '',
@@ -1941,8 +2019,8 @@ npm run dev
 
 The backend seeds a test user via `php artisan migrate --seed`:
 
-- email: `test@example.com`
-- senha: `password`
+- email: `demo@fone-ninja.test`
+- senha: `password123`
 
 ## Testing
 
@@ -1983,6 +2061,8 @@ git commit -m "docs: add setup instructions and seeded login credentials"
 ## Plan Self-Review Notes
 
 - **Spec coverage**: every spec section (§2 layered architecture, §3.1 HTTP client, §3.2 error handling, §3.3 routing, §4 all four screens, §5 testing, §6 folder structure) maps to at least one task above. The seeded-credentials and product-refetch-after-purchase/sale fixes from the design review are implemented in Tasks 7, 8, and 10.
+- **Backend contract verification (against the finished `fone-ninja-backend`)**: `php artisan route:list` confirms every route the plan consumes — `POST /login`, `POST /logout`, `GET|POST /produtos`, `GET|POST /compras`, `GET|POST /vendas`, `POST /vendas/{id}/cancelar` (all under `/api`, auth via `auth:sanctum`). `POST /compras` and `POST /vendas` require the `Idempotency-Key` header (`EnsureIdempotencyKey` returns 400 when missing, 409 on a duplicate in-flight key); the cancel route does not. Validation uses `distinct` + `min:0.01` on items and the financial limiter is 30/min (429). This verification drove four plan corrections: (1) money fields serialize as 2-decimal **strings** via `Money::formatted()`, not plain numbers — response types updated and the Global Constraint rewritten; (2) purchase/sale item resources expose `id`/`nome`, not `produto_id`/`produto_nome`, and there is no per-item `lucro_item` — Task 2 types and the PurchasesView items slot updated; (3) resources do not serialize `created_at` — the field is now optional in types and the PurchasesView "Data" column was dropped; (4) seeded login is `demo@fone-ninja.test` / `password123` (DatabaseSeeder), not the previously documented `test@example.com` / `password`.
 - **Idempotency key correctness**: Task 7/8 generate the key inside the composable's `submit()`, once per call, and pass it explicitly to the store/service — matching the corrected design. Task 9 adds the re-entry guard (`if (loading.value) return`) that the design's "first line of defense" language implied but earlier tasks hadn't yet coded explicitly; this task closes that gap with a real regression test rather than leaving it as an assumption.
 - **Type consistency**: `Purchase`/`Sale`/`PurchaseItem`/`SaleItem` (Task 2) are used identically in every later service, store, composable, and test — no renamed fields.
 - **Post-review fixes**: an independent review against this plan flagged two real gaps, both fixed inline above: (1) `PurchasesView`'s history table was missing the `produtos` (items) column the spec's §4 explicitly requires — added as a slot rendering `nome xquantidade` per item; (2) `usePurchaseForm`/`useSaleForm` validated `preco_unitario` as merely positive (`< 0.01` was allowed), looser than the backend's `min:0.01` rule — tightened to `< 0.01` in both composables so the client rejects what the backend would reject, instead of round-tripping a 422.
+- **Live profit estimate (requirement change)**: the challenge's "Mostrar total da venda e lucro estimado" screen requirement is met by a backend-sourced estimate, per the product owner's explicit decision ("valor deve vir do backend"). This removes the previous client-side `subtotalPreview` from the sale form (Task 8) and replaces it with `preview: SalePreview | null` fed by a `watch` on the sale line items that calls `saleStore.preview()` → `saleService.preview()` → `POST /api/vendas/preview`. The purchase form's raw subtotal preview is untouched. **Backend status**: the preview endpoint is shipped (`fone-ninja-backend` commit `23da51e`, suite green: 77 passed, 3 skipped CHECK-constraint tests) — no further backend work needed; Task 8 just consumes it.
