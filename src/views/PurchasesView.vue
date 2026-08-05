@@ -66,6 +66,8 @@ const headers = [
   { title: 'Itens', key: 'produtos', sortable: false },
 ]
 
+defineExpose({ form, submit, loading })
+
 onMounted(() => {
   purchaseStore.fetchAll()
   productStore.fetchAll()
