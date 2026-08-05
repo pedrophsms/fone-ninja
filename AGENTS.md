@@ -151,3 +151,41 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Do NOT delete tests without approval.
 
 </laravel-boost-guidelines>
+
+<project-specific-guidelines>
+=== fone-ninja-backend project rules ===
+
+# Project Context
+
+This is a Laravel 13 inventory ERP API backend (products/purchases/sales, average-cost + profit calculation), built for a fintech senior-dev technical challenge. It is implemented task-by-task from a TDD plan using subagent-driven development.
+
+- Plan: `docs/superpowers/plans/2026-08-05-backend-implementation.md` (20 tasks, full code for each already written — treat it as the source of truth for exact signatures/values).
+- Spec: `docs/superpowers/specs/2026-08-05-backend-architecture-design.md`.
+- Progress ledger: `.superpowers/sdd/2026-08-05-backend-implementation/progress.md`.
+
+## Language boundary (do not violate)
+
+- ALL internal PHP identifiers (classes, methods, properties, migrations, comments, log messages) MUST be in English.
+- The HTTP contract ONLY — routes, FormRequest validated keys, Resource output keys, domain-exception `message` strings — is in Portuguese, matching the README verbatim (`/api/produtos`, `/api/compras`, `/api/vendas`, `nome`, `preco_venda`, `custo_medio`, `estoque`, `quantidade`, `preco_unitario`, `fornecedor`, `cliente`, `"Estoque insuficiente para o produto <nome>"`).
+- FormRequests and Resources are the ONLY place that speaks Portuguese. Everything else is English.
+
+## Money
+
+- All monetary values are integer cents in the DB. `App\ValueObjects\Money` (Task 2) is the only type allowed to carry a monetary value across a method boundary. Decimal strings only appear at the HTTP boundary.
+
+## Local Sail port overrides
+
+This machine already runs another project's Docker MySQL/app on the default Sail ports. This project's `.env` overrides them to avoid collisions:
+- `FORWARD_DB_PORT=33061` (default Sail is 3306)
+- `APP_PORT=8899` (default Sail is 80)
+- `VITE_PORT=5174` (default Sail is 5173)
+
+Do not remove these overrides or revert to default ports — `sail up` will fail with "port is already allocated".
+
+## Test environment
+
+- `phpunit.xml` deliberately sets `DB_CONNECTION=sqlite` / `DB_DATABASE=:memory:` for fast Feature/Unit test runs. Do not change this to MySQL — it's a global project constraint.
+- `tests/Pest.php` must have `Illuminate\Foundation\Testing\RefreshDatabase::class` enabled for `Feature` tests (Laravel ships this commented out by default — verify it's uncommented).
+- CHECK constraints (positive price, non-negative stock, etc.) are MySQL-only (`DB::getDriverName() === 'mysql'` guarded in migrations); their tests use Pest's `->skip(fn () => DB::getDriverName() !== 'mysql', 'reason')` chained on the OUTER `test(...)` call — never call `test()->skip(...)` *inside* the test closure body, that throws (see task-3 fix in the ledger for the real bug this caused).
+- Run tests via `./vendor/bin/sail artisan test --filter=...` (Sail/Docker is up for this project).
+
