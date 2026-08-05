@@ -6,7 +6,7 @@ ERP de estoque: cadastro de produtos, compras (entrada + custo médio ponderado)
 fone-ninja/
 ├── docker-compose.yml      <- sobe os três serviços juntos
 ├── backend/                <- Laravel API (Dockerfile, rotas /api, Sanctum)
-└── frontend/               <- Vue 3 + Vuetify SPA (Dockerfile, nginx)
+└── frontend/               <- Vue 3 SPA (Dockerfile, nginx, Tailwind CSS v4)
 ```
 
 ## Como rodar os dois ao mesmo tempo
@@ -81,6 +81,12 @@ cd frontend && npm run test
 
 ## Docs
 
-- `backend/docs/` — spec e plano de implementação do backend
-- `frontend/docs/` — spec e plano de implementação do frontend
-- `Fone-Ninja-Teste-Tecnico/` — README original do desafio (fora deste repo)
+Documentação unificada em `docs/`:
+
+| Arquivo | Conteúdo |
+|---|---|
+| [`regras-de-negocio.md`](docs/regras-de-negocio.md) | Glossário, fluxos de compra/venda/cancelamento, cálculos de custo médio e lucro, KPIs, integridade |
+| [`arquitetura-backend.md`](docs/arquitetura-backend.md) | Modelo ER, middleware pipeline, Actions, eventos, Money VO, Repository pattern |
+| [`arquitetura-frontend.md`](docs/arquitetura-frontend.md) | Camadas View→Composable→Store→Service→HTTP, rotas, stores, pipeline de erro, formulários, tema |
+| [`decisoes-estruturais-backend.md`](docs/decisoes-estruturais-backend.md) | 14 ADRs: Laravel, PHP 8.4, Sanctum, Money VO, Action, Repository, DTO, idempotência, eventos, locks, retries, FormRequests, services, Pest |
+| [`decisoes-estruturais-frontend.md`](docs/decisoes-estruturais-frontend.md) | 11 ADRs: Vue 3 SPA, TS strict, Pinia, shadcn-vue, TanStack Table, composables, Tailwind v4, Axios interceptor, Vitest |
