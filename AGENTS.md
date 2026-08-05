@@ -173,15 +173,6 @@ This is a Laravel 13 inventory ERP API backend (products/purchases/sales, averag
 
 - All monetary values are integer cents in the DB. `App\ValueObjects\Money` (Task 2) is the only type allowed to carry a monetary value across a method boundary. Decimal strings only appear at the HTTP boundary.
 
-## Local Sail port overrides
-
-This machine already runs another project's Docker MySQL/app on the default Sail ports. This project's `.env` overrides them to avoid collisions:
-- `FORWARD_DB_PORT=33061` (default Sail is 3306)
-- `APP_PORT=8899` (default Sail is 80)
-- `VITE_PORT=5174` (default Sail is 5173)
-
-Do not remove these overrides or revert to default ports — `sail up` will fail with "port is already allocated".
-
 ## Test environment
 
 - `phpunit.xml` deliberately sets `DB_CONNECTION=sqlite` / `DB_DATABASE=:memory:` for fast Feature/Unit test runs. Do not change this to MySQL — it's a global project constraint.
