@@ -15,7 +15,7 @@ use OpenApi\Attributes as OA;
 class ProductsController extends Controller
 {
     #[OA\Get(
-        path: '/api/produtos',
+        path: '/produtos',
         summary: 'Lista produtos com custo médio, preço e estoque atual',
         tags: ['Produtos'],
         responses: [new OA\Response(response: 200, description: 'Lista paginada de produtos')],
@@ -26,7 +26,7 @@ class ProductsController extends Controller
     }
 
     #[OA\Post(
-        path: '/api/produtos',
+        path: '/produtos',
         summary: 'Cadastra um novo produto',
         tags: ['Produtos'],
         requestBody: new OA\RequestBody(
