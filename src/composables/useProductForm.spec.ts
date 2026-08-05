@@ -52,5 +52,43 @@ describe('useProductForm', () => {
     expect(store.create).toHaveBeenCalledWith({ nome: 'Fone Bluetooth', preco_venda: 50 })
     expect(form.nome).toBe('')
     expect(form.preco_venda).toBeNull()
+    expect(form.estoque_inicial).toBeNull()
+  })
+
+  it('rejects a negative estoque_inicial without calling the store', async () => {
+    const { form, errors, submit } = useProductForm()
+    const store = useProductStore()
+    vi.spyOn(store, 'create')
+    form.nome = 'Fone Bluetooth'
+    form.preco_venda = 50
+    form.estoque_inicial = -1
+
+    await submit()
+
+    expect(errors.estoque_inicial).toEqual(['Estoque inicial não pode ser negativo'])
+    expect(store.create).not.toHaveBeenCalled()
+  })
+
+  it('sends estoque_inicial when set', async () => {
+    const { form, submit } = useProductForm()
+    const store = useProductStore()
+    vi.spyOn(store, 'create').mockResolvedValue({
+      id: 2,
+      nome: 'Fone Gamer',
+      custo_medio: '0.00',
+      preco_venda: '300.00',
+      estoque: 10,
+    })
+    form.nome = 'Fone Gamer'
+    form.preco_venda = 300
+    form.estoque_inicial = 10
+
+    await submit()
+
+    expect(store.create).toHaveBeenCalledWith({
+      nome: 'Fone Gamer',
+      preco_venda: 300,
+      estoque_inicial: 10,
+    })
   })
 })

@@ -12,6 +12,14 @@
             step="0.01"
             :error-messages="errors.preco_venda"
           />
+          <v-text-field
+            v-model.number="form.estoque_inicial"
+            label="Estoque inicial"
+            type="number"
+            min="0"
+            step="1"
+            :error-messages="errors.estoque_inicial"
+          />
           <v-btn type="submit" color="primary" :loading="loading" :disabled="loading">
             Cadastrar
           </v-btn>

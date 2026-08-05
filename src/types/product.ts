@@ -9,4 +9,5 @@ export interface Product {
 export interface CreateProductPayload {
   nome: string
   preco_venda: number
+  estoque_inicial?: number
 }

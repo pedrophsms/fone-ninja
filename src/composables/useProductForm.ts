@@ -2,14 +2,16 @@ import { reactive, ref } from 'vue'
 import { useProductStore } from '@/stores/product'
 import { useApiError } from '@/composables/useApiError'
 import { useSnackbarStore } from '@/stores/snackbar'
+import type { CreateProductPayload } from '@/types/product'
 
 interface ProductFormState {
   nome: string
   preco_venda: number | null
+  estoque_inicial: number | null
 }
 
 export function useProductForm() {
-  const form = reactive<ProductFormState>({ nome: '', preco_venda: null })
+  const form = reactive<ProductFormState>({ nome: '', preco_venda: null, estoque_inicial: null })
   const errors = reactive<Record<string, string[]>>({})
   const loading = ref(false)
   const productStore = useProductStore()
@@ -24,6 +26,12 @@ export function useProductForm() {
     if (!form.preco_venda || form.preco_venda <= 0) {
       errors.preco_venda = ['Preço de venda deve ser positivo']
     }
+    if (
+      form.estoque_inicial !== null &&
+      (form.estoque_inicial < 0 || !Number.isInteger(form.estoque_inicial))
+    ) {
+      errors.estoque_inicial = ['Estoque inicial não pode ser negativo']
+    }
     return Object.keys(errors).length === 0
   }
 
@@ -31,10 +39,15 @@ export function useProductForm() {
     if (!validate()) return
     loading.value = true
     try {
-      await productStore.create({ nome: form.nome, preco_venda: form.preco_venda! })
+      const payload: CreateProductPayload = { nome: form.nome, preco_venda: form.preco_venda! }
+      if (form.estoque_inicial !== null) {
+        payload.estoque_inicial = form.estoque_inicial
+      }
+      await productStore.create(payload)
       snackbar.showSuccess('Produto cadastrado com sucesso')
       form.nome = ''
       form.preco_venda = null
+      form.estoque_inicial = null
     } catch (error) {
       const fieldErrors = handle(error)
       if (fieldErrors) Object.assign(errors, fieldErrors)

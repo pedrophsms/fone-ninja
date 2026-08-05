@@ -166,6 +166,7 @@ export interface Product {
 export interface CreateProductPayload {
   nome: string
   preco_venda: number
+  estoque_inicial?: number
 }
 ```
 
@@ -973,10 +974,11 @@ import { useSnackbarStore } from '@/stores/snackbar'
 interface ProductFormState {
   nome: string
   preco_venda: number | null
+  estoque_inicial: number | null
 }
 
 export function useProductForm() {
-  const form = reactive<ProductFormState>({ nome: '', preco_venda: null })
+  const form = reactive<ProductFormState>({ nome: '', preco_venda: null, estoque_inicial: null })
   const errors = reactive<Record<string, string[]>>({})
   const loading = ref(false)
   const productStore = useProductStore()
@@ -991,6 +993,12 @@ export function useProductForm() {
     if (!form.preco_venda || form.preco_venda <= 0) {
       errors.preco_venda = ['Preço de venda deve ser positivo']
     }
+    if (
+      form.estoque_inicial !== null &&
+      (form.estoque_inicial < 0 || !Number.isInteger(form.estoque_inicial))
+    ) {
+      errors.estoque_inicial = ['Estoque inicial não pode ser negativo']
+    }
     return Object.keys(errors).length === 0
   }
 
@@ -998,10 +1006,15 @@ export function useProductForm() {
     if (!validate()) return
     loading.value = true
     try {
-      await productStore.create({ nome: form.nome, preco_venda: form.preco_venda! })
+      const payload: CreateProductPayload = { nome: form.nome, preco_venda: form.preco_venda! }
+      if (form.estoque_inicial !== null) {
+        payload.estoque_inicial = form.estoque_inicial
+      }
+      await productStore.create(payload)
       snackbar.showSuccess('Produto cadastrado com sucesso')
       form.nome = ''
       form.preco_venda = null
+      form.estoque_inicial = null
     } catch (error) {
       const fieldErrors = handle(error)
       if (fieldErrors) Object.assign(errors, fieldErrors)
@@ -1036,6 +1049,14 @@ Expected: PASS (3 tests)
             type="number"
             step="0.01"
             :error-messages="errors.preco_venda"
+          />
+          <v-text-field
+            v-model.number="form.estoque_inicial"
+            label="Estoque inicial"
+            type="number"
+            min="0"
+            step="1"
+            :error-messages="errors.estoque_inicial"
           />
           <v-btn type="submit" color="primary" :loading="loading" :disabled="loading">
             Cadastrar
@@ -2065,5 +2086,6 @@ git commit -m "docs: add setup instructions and seeded login credentials"
 - **Idempotency key correctness**: Task 7/8 generate the key inside the composable's `submit()`, once per call, and pass it explicitly to the store/service — matching the corrected design. Task 9 adds the re-entry guard (`if (loading.value) return`) that the design's "first line of defense" language implied but earlier tasks hadn't yet coded explicitly; this task closes that gap with a real regression test rather than leaving it as an assumption.
 - **Type consistency**: `Purchase`/`Sale`/`PurchaseItem`/`SaleItem` (Task 2) are used identically in every later service, store, composable, and test — no renamed fields.
 - **Single-resource `data` wrapper (found in live smoke test)**: `POST /produtos`, `POST /compras`, `POST /vendas`, and `POST /vendas/{id}/cancelar` each return the resource wrapped in a top-level `data` key (`{"data": {...}}`), this Laravel version's default for `JsonResource`. The service layer unwraps with `.data.data` in `productService.create`, `purchaseService.create`, `saleService.create`, and `saleService.cancel`; only `POST /vendas/preview` returns a bare object. The `PurchasesView` component-test mock reflects the wrapped shape. Verified end-to-end against the running Sail backend: login, list, create, purchase (idempotent replay returns the same record id), preview (unwrapped `{total, lucro, itens}`), sale, cancel, CORS preflight for `authorization`, and the SPA dev server.
+- **`estoque_inicial` on the product form (requirement addition)**: the backend's `POST /produtos` already accepts an optional `estoque_inicial` (`integer, min:0`, default 0), so the frontend form now exposes it. `CreateProductPayload.estoque_inicial` is optional; `useProductForm` validates it as non-negative integer and only sends it when the user typed a value (leaving it blank defers to the backend default). Covered by two extra `useProductForm` tests (negative rejection + payload forwarding) and verified live (estoque 7 created, -3 rejected with 422).
 - **Post-review fixes**: an independent review against this plan flagged two real gaps, both fixed inline above: (1) `PurchasesView`'s history table was missing the `produtos` (items) column the spec's §4 explicitly requires — added as a slot rendering `nome xquantidade` per item; (2) `usePurchaseForm`/`useSaleForm` validated `preco_unitario` as merely positive (`< 0.01` was allowed), looser than the backend's `min:0.01` rule — tightened to `< 0.01` in both composables so the client rejects what the backend would reject, instead of round-tripping a 422.
 - **Live profit estimate (requirement change)**: the challenge's "Mostrar total da venda e lucro estimado" screen requirement is met by a backend-sourced estimate, per the product owner's explicit decision ("valor deve vir do backend"). This removes the previous client-side `subtotalPreview` from the sale form (Task 8) and replaces it with `preview: SalePreview | null` fed by a `watch` on the sale line items that calls `saleStore.preview()` → `saleService.preview()` → `POST /api/vendas/preview`. The purchase form's raw subtotal preview is untouched. **Backend status**: the preview endpoint is shipped (`fone-ninja-backend` commit `23da51e`, suite green: 77 passed, 3 skipped CHECK-constraint tests) — no further backend work needed; Task 8 just consumes it.
