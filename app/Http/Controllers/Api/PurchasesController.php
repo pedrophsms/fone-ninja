@@ -18,7 +18,11 @@ class PurchasesController extends Controller
         path: '/compras',
         summary: 'Lista compras registradas com seus itens',
         tags: ['Compras'],
-        responses: [new OA\Response(response: 200, description: 'Lista paginada de compras')],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Lista paginada de compras'),
+            new OA\Response(response: 401, description: 'Não autenticado'),
+        ],
     )]
     public function index(PurchaseRepositoryInterface $purchases): AnonymousResourceCollection
     {
@@ -48,8 +52,10 @@ class PurchasesController extends Controller
                 ],
             ),
         ),
+        security: [['sanctum' => []]],
         responses: [
             new OA\Response(response: 201, description: 'Compra registrada'),
+            new OA\Response(response: 401, description: 'Não autenticado'),
             new OA\Response(response: 422, description: 'Erro de validação'),
         ],
     )]

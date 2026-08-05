@@ -20,7 +20,11 @@ class SalesController extends Controller
         path: '/vendas',
         summary: 'Lista vendas registradas com seus itens',
         tags: ['Vendas'],
-        responses: [new OA\Response(response: 200, description: 'Lista paginada de vendas')],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Lista paginada de vendas'),
+            new OA\Response(response: 401, description: 'Não autenticado'),
+        ],
     )]
     public function index(SaleRepositoryInterface $sales): AnonymousResourceCollection
     {
@@ -50,8 +54,10 @@ class SalesController extends Controller
                 ],
             ),
         ),
+        security: [['sanctum' => []]],
         responses: [
             new OA\Response(response: 201, description: 'Venda registrada'),
+            new OA\Response(response: 401, description: 'Não autenticado'),
             new OA\Response(response: 422, description: 'Erro de validação ou estoque insuficiente'),
         ],
     )]
@@ -72,8 +78,10 @@ class SalesController extends Controller
         parameters: [
             new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
         ],
+        security: [['sanctum' => []]],
         responses: [
             new OA\Response(response: 200, description: 'Venda cancelada'),
+            new OA\Response(response: 401, description: 'Não autenticado'),
             new OA\Response(response: 422, description: 'Venda já cancelada'),
         ],
     )]

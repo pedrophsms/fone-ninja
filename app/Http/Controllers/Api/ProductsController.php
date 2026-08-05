@@ -18,7 +18,11 @@ class ProductsController extends Controller
         path: '/produtos',
         summary: 'Lista produtos com custo médio, preço e estoque atual',
         tags: ['Produtos'],
-        responses: [new OA\Response(response: 200, description: 'Lista paginada de produtos')],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Lista paginada de produtos'),
+            new OA\Response(response: 401, description: 'Não autenticado'),
+        ],
     )]
     public function index(ProductRepositoryInterface $products): AnonymousResourceCollection
     {
@@ -36,11 +40,14 @@ class ProductsController extends Controller
                 properties: [
                     new OA\Property(property: 'nome', type: 'string', example: 'Fone Bluetooth'),
                     new OA\Property(property: 'preco_venda', type: 'number', format: 'float', example: 99.90),
+                    new OA\Property(property: 'estoque_inicial', type: 'integer', example: 0, description: 'Opcional, padrão 0. Estoque é normalmente incrementado via POST /compras.'),
                 ],
             ),
         ),
+        security: [['sanctum' => []]],
         responses: [
             new OA\Response(response: 201, description: 'Produto criado'),
+            new OA\Response(response: 401, description: 'Não autenticado'),
             new OA\Response(response: 422, description: 'Erro de validação'),
         ],
     )]
@@ -49,6 +56,7 @@ class ProductsController extends Controller
         $product = $action->execute(
             name: $request->validated('nome'),
             salePrice: Money::fromDecimalString((string) $request->validated('preco_venda')),
+            initialStock: (int) $request->validated('estoque_inicial', 0),
         );
 
         return (new ProductResource($product))->response()->setStatusCode(201);

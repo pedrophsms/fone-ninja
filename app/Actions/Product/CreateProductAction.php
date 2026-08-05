@@ -12,13 +12,13 @@ class CreateProductAction
     {
     }
 
-    public function execute(string $name, Money $salePrice): Product
+    public function execute(string $name, Money $salePrice, int $initialStock = 0): Product
     {
         return $this->products->create([
             'name' => $name,
             'sale_price_cents' => $salePrice,
             'average_cost_cents' => Money::zero(),
-            'current_stock' => 0,
+            'current_stock' => $initialStock,
         ]);
     }
 }

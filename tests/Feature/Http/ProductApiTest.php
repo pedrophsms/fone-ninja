@@ -20,6 +20,25 @@ test('a product can be created with the README fields', function () {
     ]);
 });
 
+test('a product can be created with an explicit estoque_inicial', function () {
+    $response = $this->postJson('/api/produtos', ['nome' => 'Fone Bluetooth', 'preco_venda' => '99.90', 'estoque_inicial' => 5]);
+
+    $response->assertCreated();
+    $response->assertJson([
+        'data' => [
+            'nome' => 'Fone Bluetooth',
+            'estoque' => 5,
+        ],
+    ]);
+});
+
+test('estoque_inicial cannot be negative', function () {
+    $response = $this->postJson('/api/produtos', ['nome' => 'Produto Teste', 'preco_venda' => '10.00', 'estoque_inicial' => -1]);
+
+    $response->assertStatus(422);
+    $response->assertJsonValidationErrors('estoque_inicial');
+});
+
 test('nome must be at least 3 characters', function () {
     $response = $this->postJson('/api/produtos', ['nome' => 'Fo', 'preco_venda' => '10.00']);
 
