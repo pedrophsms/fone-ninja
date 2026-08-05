@@ -14,5 +14,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/produtos', [ProductsController::class, 'index']);
     Route::post('/produtos', [ProductsController::class, 'store']);
     Route::get('/compras', [PurchasesController::class, 'index']);
-    Route::post('/compras', [PurchasesController::class, 'store'])->middleware('idempotent');
+    Route::post('/compras', [PurchasesController::class, 'store'])->middleware(['idempotent', 'throttle:financial']);
 });
